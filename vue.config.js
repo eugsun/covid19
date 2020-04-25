@@ -1,4 +1,7 @@
 module.exports = {
+    publicPath: process.env.ENV === 'production'
+        ? '/covid19/'
+        : '/',
     configureWebpack: {
         module: {
             rules: [
