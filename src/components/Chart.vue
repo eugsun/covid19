@@ -42,7 +42,11 @@
                             <a class="panel-block columns" v-on:click="toggleHidden(index)"
                                v-for="(state, index) in availableStates" :key="index">
                                 <span class="column is-two-thirds">{{ getStateName(state.label) }} ({{ state.label }})</span>
-                                <span class="column is-one-third has-text-right">{{ !state.hidden }}</span>
+                                <span class="column is-one-third has-text-right">
+                                    <div v-if="!state.hidden">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                </span>
                             </a>
                         </div>
                     </div>

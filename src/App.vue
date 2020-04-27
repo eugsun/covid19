@@ -32,8 +32,9 @@
          Dashboard, Chart
      },
      mounted () {
-         this.$store.dispatch("retrieveUSData");
-         this.$store.dispatch("retrieveStatesData");
+         this.$store.dispatch("retrieveUSData").then(() => {
+             this.$store.dispatch("retrieveStatesData");
+         });
      }
  }
 </script>
