@@ -45,13 +45,13 @@
          totalPositives: function () { return this.$store.state.snapshot.positive.toLocaleString() },
          totalDeaths: function () { return this.$store.state.snapshot.death.toLocaleString() },
          percentTested: function () {
-             return this.$store.getters.percentTested.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
+             return this.$store.state.snapshot.percentTested.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
          percentPositive: function () {
-             return this.$store.getters.percentPositive.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
+             return this.$store.state.snapshot.percentPositive.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
          percentDead: function () {
-             return this.$store.getters.percentDead.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
+             return this.$store.state.snapshot.percentDead.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
      },
      mounted () {

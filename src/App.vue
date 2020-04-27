@@ -1,7 +1,7 @@
 <template>
     <div id="app">
-        <Dashboard />
-        <Chart />
+        <Dashboard :key="dashKey" />
+        <Chart :key="chartKey" />
         <footer class="footer">
             <div class="container">
                 <p>By <a href="https://twitter.com/eugsun">@eugsun</a></p>
@@ -18,12 +18,22 @@
 
  export default {
      name: 'App',
+     computed: {
+         dashKey: function () {
+             let datasets = this.$store.state.chartData.datasets ?? []
+             return `dash:${datasets.length}`
+         },
+         chartKey: function () {
+             let datasets = this.$store.state.chartData.datasets ?? []
+             return `chart:${datasets.length}`
+         }
+     },
      components: {
          Dashboard, Chart
      },
      mounted () {
+         this.$store.dispatch("retrieveUSData");
          this.$store.dispatch("retrieveStatesData");
-         this.$store.dispatch("retrieveUSSnapshot");
      }
  }
 </script>

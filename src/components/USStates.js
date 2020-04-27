@@ -1,4 +1,5 @@
 export default {
+    "USA": "USA",
     "AL": "Alabama",
     "AK": "Alaska",
     "AS": "American Samoa",

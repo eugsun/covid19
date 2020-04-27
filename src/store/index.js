@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import { SET_US_SNAPSHOT, SET_STATES_DATA, SET_CHART_DATA, TOGGLE_STATE_HIDDEN } from "./mutations.js"
+import { SET_US_SNAPSHOT, SET_US_DATA, SET_STATES_DATA, SET_CHART_DATA, TOGGLE_STATE_HIDDEN } from "./mutations.js"
 
 Vue.use(Vuex)
 
@@ -20,6 +20,9 @@ export default new Vuex.Store({
       totalTestResults: 0,
       positive: 0,
       death: 0,
+      percentTested: 0,
+      percentPositive: 0,
+      percentDead: 0,
     },
     dates: [],
     datasetMap: new Map(),
@@ -28,27 +31,65 @@ export default new Vuex.Store({
       movingAvgDays: 7,
       lookbackDays: 30,
     },
-    chartData: {
-    },
+    chartData: {},
   },
   getters: {
-    percentTested (state) {
-      return state.snapshot.totalTestResults / state.usPopulation
-    },
-    percentPositive (state) {
-      return state.snapshot.positive / state.snapshot.totalTestResults
-    },
-    percentDead (state) {
-      return state.snapshot.death / state.snapshot.positive
-    },
   },
   mutations: {
-    [SET_US_SNAPSHOT] (state, snapshot) {
-      state.snapshot = snapshot;
+    [SET_US_SNAPSHOT] (state) {
+      let usa = state.datasetMap.get("USA");
+      if (!usa) {
+        return state.snapshot
+      }
+      let dates = Array.from(usa.metadata.keys())
+      dates.sort()
+      dates.reverse()
+      let lastDate = dates[0]
+      console.log(usa.metadata)
+      let data = {
+        lastModified: usa.metadata.get(lastDate).lastModified,
+        totalTestResults: usa.metadata.get(lastDate).totalTestResults ?? 0,
+        positive: usa.metadata.get(lastDate).positive ?? 0,
+        death: usa.metadata.get(lastDate).death ?? 0,
+      }
+      data.percentTested  = data.totalTestResults / state.usPopulation
+      data.percentPositive = data.positive / data.totalTestResults
+      data.percentDead = data.death / data.positive
+      state.snapshot = data;
+    },
+    [SET_US_DATA] (state, usData) {
+      let labelSet = new Set();
+      // state.datasetMap = new Map();
+      usData.forEach(function(d) {
+        labelSet.add(d.date);
+        if (!state.datasetMap.has("USA")) {
+          let stateColor = getRandomColorRgb();
+          state.datasetMap.set("USA", {
+            label: "USA",
+            data: [],
+            metadata: new Map(),
+            borderColor: stateColor,
+            backgroundColor: stateColor,
+            // hidden: d.state != "NY" && d.state != "MD",
+            fill: false,
+          })
+        }
+        let metadata = state.datasetMap.get("USA").metadata;
+        metadata.set(d.date, {
+          positiveIncrease : d.positiveIncrease,
+          deathIncrease: d.deathIncrease,
+          totalTestResults: d.totalTestResults,
+          positive: d.positive,
+          death: d.death,
+          lastModified: d.dateChecked,
+        });
+      });
+      state.dates = Array.from(labelSet);
+      state.dates.sort();
     },
     [SET_STATES_DATA] (state, statesData) {
       let labelSet = new Set();
-      state.datasetMap = new Map();
+      // state.datasetMap = new Map();
       statesData.forEach(function(d) {
         labelSet.add(d.date);
         if (!state.datasetMap.has(d.state)) {
@@ -67,6 +108,10 @@ export default new Vuex.Store({
         metadata.set(d.date, {
           positiveIncrease : d.positiveIncrease,
           deathIncrease: d.deathIncrease,
+          totalTestResults: d.totalTestResults,
+          positive: d.positive,
+          death: d.death,
+          lastModified: d.dateChecked,
         });
       });
       state.dates = Array.from(labelSet);
@@ -130,14 +175,26 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    retrieveUSSnapshot (context) {
-      const api = "https://covidtracking.com/api/v1/us/current.json";
+    // retrieveUSSnapshot (context) {
+    //   const api = "https://covidtracking.com/api/v1/us/current.json";
+    //   fetch(api)
+    //     .then((response) => {
+    //       return response.json();
+    //     })
+    //     .then((data) => {
+    //       context.commit(SET_US_SNAPSHOT, data[0]);
+    //     });
+    // },
+    retrieveUSData (context) {
+      const api = "https://covidtracking.com/api/v1/us/daily.json";
       fetch(api)
         .then((response) => {
           return response.json();
         })
         .then((data) => {
-          context.commit(SET_US_SNAPSHOT, data[0]);
+          context.commit(SET_US_DATA, data);
+          context.commit(SET_CHART_DATA, {});
+          context.commit(SET_US_SNAPSHOT);
         });
     },
     retrieveStatesData (context) {
