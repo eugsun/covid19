@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import { SET_US_SNAPSHOT, SET_STATES_DATA, SET_CHART_DATA } from "./mutations.js"
+import { SET_US_SNAPSHOT, SET_STATES_DATA, SET_CHART_DATA, TOGGLE_STATE_HIDDEN } from "./mutations.js"
 
 Vue.use(Vuex)
 
@@ -21,7 +21,8 @@ export default new Vuex.Store({
       positive: 0,
       death: 0,
     },
-    statesData: [],
+    dates: [],
+    datasetMap: new Map(),
     chartConfig: {
       labels: [],
       movingAvgDays: 7,
@@ -46,19 +47,13 @@ export default new Vuex.Store({
       state.snapshot = snapshot;
     },
     [SET_STATES_DATA] (state, statesData) {
-      state.statesData = statesData;
-    },
-    [SET_CHART_DATA] (state, chartConfig) {
-      state.chartConfig.movingAvgDays = chartConfig.movingAvgDays ?? state.chartConfig.movingAvgDays;
-      state.chartConfig.lookbackDays = chartConfig.lookbackDays ?? state.chartConfig.lookbackDays;
-
       let labelSet = new Set();
-      let datasetMap = new Map();
-      state.statesData.forEach(function(d) {
+      state.datasetMap = new Map();
+      statesData.forEach(function(d) {
         labelSet.add(d.date);
-        if (!datasetMap.has(d.state)) {
+        if (!state.datasetMap.has(d.state)) {
           let stateColor = getRandomColorRgb();
-          datasetMap.set(d.state, {
+          state.datasetMap.set(d.state, {
             label: d.state,
             data: [],
             metadata: new Map(),
@@ -68,22 +63,23 @@ export default new Vuex.Store({
             fill: false,
           })
         }
-        // datasetMap.get(d.state).data.push(d.positiveIncrease);
-        let metadata = datasetMap.get(d.state).metadata;
+        let metadata = state.datasetMap.get(d.state).metadata;
         metadata.set(d.date, {
           positiveIncrease : d.positiveIncrease,
           deathIncrease: d.deathIncrease,
         });
-        // datasetMap.get(d.state).data.push(d.deathIncrease);
       });
-      state.chartConfig.labels = Array.from(labelSet);
-      state.chartConfig.labels.sort();
+      state.dates = Array.from(labelSet);
+      state.dates.sort();
+    },
+    [SET_CHART_DATA] (state, chartConfig) {
+      state.chartConfig.movingAvgDays = chartConfig.movingAvgDays ?? state.chartConfig.movingAvgDays;
+      state.chartConfig.lookbackDays = chartConfig.lookbackDays ?? state.chartConfig.lookbackDays;
 
-      let labels = state.chartConfig.labels;
-      let datasets = Array.from(datasetMap.values());
+      let datasets = Array.from(state.datasetMap.values());
       datasets.forEach(function(dataset) {
         // dataset.data.reverse();
-        labels.forEach(function(dateLabel) {
+        state.dates.forEach(function(dateLabel) {
           if (dataset.metadata.has(dateLabel)) {
             dataset.data.push(dataset.metadata.get(dateLabel).positiveIncrease);
           } else {
@@ -125,9 +121,12 @@ export default new Vuex.Store({
       });
 
       state.chartData = {
-        labels: labels.slice(labels.length - state.chartConfig.lookbackDays, labels.length),
+        labels: state.dates.slice(state.dates.length - state.chartConfig.lookbackDays, state.dates.length),
         datasets: datasets,
       };
+    },
+    [TOGGLE_STATE_HIDDEN] (state, { label }) {
+      state.datasetMap.get(label).hidden = !state.datasetMap.get(label).hidden;
     }
   },
   actions: {
@@ -157,6 +156,10 @@ export default new Vuex.Store({
         lookbackDays: lookbackDays,
         movingAvgDays: movingAvgDays,
       });
+    },
+    toggleStateHidden (context, { label }) {
+      context.commit(TOGGLE_STATE_HIDDEN, { label: label })
+      context.commit(SET_CHART_DATA, {});
     }
   },
   modules: {
