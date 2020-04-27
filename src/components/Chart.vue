@@ -1,41 +1,50 @@
 <template>
     <section id="chart">
-        <div class="container" id="control">
-            <div class="columns is-vcentered is-centered has-text-centered">
-                <div class="column">
-                    <p>Lookback Days: {{ lookbackDays }}</p>
-                    <p><input class="slider is-fullwidth is-info is-circle" v-model="lookbackDays" type="range" min="7" max="60"></p>
-                </div>
-                <div class="column">
-                    <p>Trailing Moving Average Days: {{ movingAvgDays }}</p>
-                    <p><input class="slider is-fullwidth is-info is-circle" v-model="movingAvgDays" type="range" min="1" max="14"></p>
-                </div>
-                <div class="column">
-                    <button class="button is-primary" v-on:click="render">Update</button>
-                </div>
-            </div>
-        </div>
         <div class="container">
             <div class="columns">
                 <div class="column is-two-thirds">
-                    <div>
-                        <LineChart
-                            :chart-data="chartData"
-                            :options="options"
-                            :height="500"
-                        />
+                    <div class="panel">
+                        <div class="panel-tabs">
+                            <a v-bind:class="{ 'is-active': isChart('tests') }" v-on:click="setChart('tests')">Tests</a>
+                            <a v-bind:class="{ 'is-active': isChart('cases') }" v-on:click="setChart('cases')">Positive Cases</a>
+                            <a v-bind:class="{ 'is-active': isChart('deaths') }" v-on:click="setChart('deaths')">Deaths</a>
+                        </div>
+                        <div id="chart-control">
+                            <div class="columns is-vcentered is-centered has-text-centered">
+                                <div class="column">
+                                    <p>Lookback Days: {{ lookbackDays }}</p>
+                                    <p><input class="slider is-fullwidth is-info is-circle" v-model="lookbackDays" type="range" min="7" max="60"></p>
+                                </div>
+                                <div class="column">
+                                    <p>Trailing Moving Average Days: {{ movingAvgDays }}</p>
+                                    <p><input class="slider is-fullwidth is-info is-circle" v-model="movingAvgDays" type="range" min="1" max="14"></p>
+                                </div>
+                                <div class="column">
+                                    <button class="button is-primary" v-on:click="render">Update</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <LineChart
+                                :chart-data="chartData"
+                                :options="options"
+                                :height="500"
+                            />
+                        </div>
                     </div>
                 </div>
                 <div class="column is-one-third">
                     <div class="panel" >
                         <div class="panel-block">
-                        <input class="input" type="text" name="State" v-model="autocompleteState" />
+                            <input class="input is-primary" type="text" placeholder="Search State" v-model="autocompleteState" />
                         </div>
-                        <a class="panel-block columns" v-on:click="toggleHidden(index)"
-                           v-for="(state, index) in availableStates" :key="index">
-                            <span class="column is-two-thirds">{{ getStateName(state.label) }} ({{ state.label }})</span>
-                            <span class="column is-one-third has-text-right">{{ !state.hidden }}</span>
-                        </a>
+                        <div id="state-selection">
+                            <a class="panel-block columns" v-on:click="toggleHidden(index)"
+                               v-for="(state, index) in availableStates" :key="index">
+                                <span class="column is-two-thirds">{{ getStateName(state.label) }} ({{ state.label }})</span>
+                                <span class="column is-one-third has-text-right">{{ !state.hidden }}</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -64,8 +73,22 @@
              l.sort((a, b) => a.hidden > b.hidden)
              return l
          },
+         selectedChart: function () {
+             const chartType = this.$store.state.chartType
+             switch (chartType) {
+                 case "totalTestResultsIncrease":
+                     return "tests"
+                 case "positveIncrease":
+                     return "cases"
+                 case "deathIncrease":
+                     return "deaths"
+                 default:
+                     return "cases"
+             }
+         }
      },
      data: function () {
+         let app = this;
          return {
              autocompleteState: "",
              filterStateMap: new Map(),
@@ -75,8 +98,7 @@
              movingAvgDays: 7,
              options: {
                  title: {
-                     display: true,
-                     text: 'Growth Factor of Positive Cases by States',
+                     display: false,
                  },
                  maintainAspectRatio: false,
                  legend: {
@@ -84,6 +106,7 @@
                  },
                  tooltips: {
                      mode: 'index',
+                     intersect: false,
                      callbacks: {
                          label: function(tooltipItem, data) {
                              var label = data.datasets[tooltipItem.datasetIndex].label || '';
@@ -91,6 +114,7 @@
                                  label += ': ';
                              }
                              label += Math.round(tooltipItem.yLabel * 100) / 100;
+                             app.$store.dispatch("setSnapshotDate", {date: tooltipItem.xLabel})
                              return label;
                          }
                      }
@@ -135,10 +159,10 @@
              })
          },
          toggleHidden: function (index) {
-             console.log(`${index} => ${this.availableStates[index].hidden}`)
              this.$store.dispatch("toggleStateHidden", {
                  label: this.availableStates[index].label
              });
+             this.autocompleteState = "";
          },
          filterStates: function (autocompleteState) {
              this.availableStates.forEach((state) => {
@@ -149,9 +173,27 @@
          },
          getStateName: function (abbrev) {
              return US_STATES[abbrev];
+         },
+         setChart: function (chartType) {
+             this.$store.dispatch("setChartType", chartType)
+         },
+         isChart: function (chartType) {
+             return this.selectedChart === chartType
          }
      },
      mounted () {
      }
  }
 </script>
+
+<style scoped>
+ #state-selection {
+     height: 40rem;
+     overflow-y: scroll;
+     overflow-x: hidden;
+ }
+
+ #chart-control {
+     padding: 1rem 0;
+ }
+</style>

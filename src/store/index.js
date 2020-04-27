@@ -1,7 +1,8 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import { SET_US_SNAPSHOT, SET_US_DATA, SET_STATES_DATA, SET_CHART_DATA, TOGGLE_STATE_HIDDEN } from "./mutations.js"
+import { SET_US_SNAPSHOT, SET_US_DATA, SET_STATES_DATA, SET_CHART_DATA,
+         TOGGLE_STATE_HIDDEN, SET_SNAPSHOT_DATE, SET_CHART_TYPE } from "./mutations.js"
 
 Vue.use(Vuex)
 
@@ -15,6 +16,7 @@ function getRandomColorRgb() {
 export default new Vuex.Store({
   state: {
     usPopulation: 330579861,
+    snapshotDate: null,
     snapshot: {
       lastModified: "",
       totalTestResults: 0,
@@ -32,6 +34,7 @@ export default new Vuex.Store({
       lookbackDays: 30,
     },
     chartData: {},
+    chartType: "positiveIncrease",
   },
   getters: {
   },
@@ -45,12 +48,13 @@ export default new Vuex.Store({
       dates.sort()
       dates.reverse()
       let lastDate = dates[0]
-      console.log(usa.metadata)
+
+      let date = state.snapshotDate ?? lastDate
       let data = {
-        lastModified: usa.metadata.get(lastDate).lastModified,
-        totalTestResults: usa.metadata.get(lastDate).totalTestResults ?? 0,
-        positive: usa.metadata.get(lastDate).positive ?? 0,
-        death: usa.metadata.get(lastDate).death ?? 0,
+        lastModified: usa.metadata.get(date).lastModified,
+        totalTestResults: usa.metadata.get(date).totalTestResults ?? 0,
+        positive: usa.metadata.get(date).positive ?? 0,
+        death: usa.metadata.get(date).death ?? 0,
       }
       data.percentTested  = data.totalTestResults / state.usPopulation
       data.percentPositive = data.positive / data.totalTestResults
@@ -76,6 +80,7 @@ export default new Vuex.Store({
         }
         let metadata = state.datasetMap.get("USA").metadata;
         metadata.set(d.date, {
+          totalTestResultsIncrease: d.totalTestResultsIncrease,
           positiveIncrease : d.positiveIncrease,
           deathIncrease: d.deathIncrease,
           totalTestResults: d.totalTestResults,
@@ -106,6 +111,7 @@ export default new Vuex.Store({
         }
         let metadata = state.datasetMap.get(d.state).metadata;
         metadata.set(d.date, {
+          totalTestResultsIncrease: d.totalTestResultsIncrease,
           positiveIncrease : d.positiveIncrease,
           deathIncrease: d.deathIncrease,
           totalTestResults: d.totalTestResults,
@@ -126,7 +132,7 @@ export default new Vuex.Store({
         // dataset.data.reverse();
         state.dates.forEach(function(dateLabel) {
           if (dataset.metadata.has(dateLabel)) {
-            dataset.data.push(dataset.metadata.get(dateLabel).positiveIncrease);
+            dataset.data.push(dataset.metadata.get(dateLabel)[state.chartType]);
           } else {
             dataset.data.push(0);
           }
@@ -156,10 +162,8 @@ export default new Vuex.Store({
           let sumOriginalNow = originals.slice(i-n+1, i+1)
                                         .reduce((a, b) => a+b, 0) / n;
           let val = sumOriginalNow < 0.1 || sumOriginal < 0.1 ? 1 : sumOriginalNow / sumOriginal;
-          // console.log(`for ${i}: ${sumOriginal} => ${sumOriginalNow} Grew by ${val}`);
           avgGrowthFactors.push(val);
         }
-        // dataset.data = avgGrowthFactors;
         dataset.data = avgGrowthFactors.slice(
           avgGrowthFactors.length - state.chartConfig.lookbackDays,
           avgGrowthFactors.length);
@@ -172,19 +176,15 @@ export default new Vuex.Store({
     },
     [TOGGLE_STATE_HIDDEN] (state, { label }) {
       state.datasetMap.get(label).hidden = !state.datasetMap.get(label).hidden;
+    },
+    [SET_SNAPSHOT_DATE] (state, { date }) {
+      state.snapshotDate = date;
+    },
+    [SET_CHART_TYPE] (state, chartType) {
+      state.chartType = chartType;
     }
   },
   actions: {
-    // retrieveUSSnapshot (context) {
-    //   const api = "https://covidtracking.com/api/v1/us/current.json";
-    //   fetch(api)
-    //     .then((response) => {
-    //       return response.json();
-    //     })
-    //     .then((data) => {
-    //       context.commit(SET_US_SNAPSHOT, data[0]);
-    //     });
-    // },
     retrieveUSData (context) {
       const api = "https://covidtracking.com/api/v1/us/daily.json";
       fetch(api)
@@ -217,7 +217,24 @@ export default new Vuex.Store({
     toggleStateHidden (context, { label }) {
       context.commit(TOGGLE_STATE_HIDDEN, { label: label })
       context.commit(SET_CHART_DATA, {});
-    }
+    },
+    setSnapshotDate (context, { date }) {
+      context.commit(SET_SNAPSHOT_DATE, { date: date })
+      context.commit(SET_US_SNAPSHOT)
+    },
+    setChartType (context, chartType) {
+      let chart = "positiveIncrease";
+      switch (chartType) {
+        case "tests":
+          chart = "totalTestResultsIncrease";
+          break;
+        case "deaths":
+          chart = "deathIncrease"
+          break;
+      }
+      context.commit(SET_CHART_TYPE, chart)
+      context.commit(SET_CHART_DATA, {})
+    },
   },
   modules: {
   }
