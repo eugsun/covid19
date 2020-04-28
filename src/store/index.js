@@ -1,31 +1,39 @@
-import Vue from 'vue'
-import Vuex from 'vuex'
+import Vue from "vue"
+import Vuex from "vuex"
 
-import { SET_US_SNAPSHOT, SET_US_DATA, SET_STATES_DATA, SET_CHART_DATA,
-         TOGGLE_STATE_HIDDEN, SET_SNAPSHOT_DATE, SET_CHART_TYPE } from "./mutations.js"
+import ColorPalette from "@/components/ColorPalette"
+import USPopulations from "@/components/USPopulations"
+import USStates from "@/components/USStates"
+
+import { SET_SNAPSHOT, SET_STATES_DATA, SET_CHART_DATA,
+         TOGGLE_STATE_HIDDEN, SET_SNAPSHOT_LABEL, SET_CHART_TYPE } from "./mutations.js"
 
 Vue.use(Vuex)
 
-function getRandomColorRgb() {
-  let red = Math.floor(Math.random() * 256);
-  let green = Math.floor(Math.random() * 256);
-  let blue = Math.floor(Math.random() * 256);
-  return `rgb(${red}, ${green}, ${blue})`;
+function getColor(index) {
+  index = index ?? 0;
+  return `#${ColorPalette.colors[index]}`
+}
+
+function getDefaultSnapshot() {
+  return {
+    lastModified: "",
+    population: 0,
+    totalTestResults: 0,
+    positive: 0,
+    death: 0,
+    percentTested: 0,
+    percentPositive: 0,
+    percentDead: 0,
+  };
 }
 
 export default new Vuex.Store({
   state: {
     usPopulation: 330579861,
+    snapshotStates: new Set(),
     snapshotDate: null,
-    snapshot: {
-      lastModified: "",
-      totalTestResults: 0,
-      positive: 0,
-      death: 0,
-      percentTested: 0,
-      percentPositive: 0,
-      percentDead: 0,
-    },
+    snapshot: getDefaultSnapshot(),
     dates: [],
     datasetMap: new Map(),
     chartConfig: {
@@ -36,80 +44,75 @@ export default new Vuex.Store({
     chartData: {},
     chartType: "positiveIncrease",
   },
-  getters: {
-  },
+  getters: {},
   mutations: {
-    [SET_US_SNAPSHOT] (state) {
-      let usa = state.datasetMap.get("USA");
+    [SET_SNAPSHOT] (state, { useGlobal, label }) {
+      let usa = state.datasetMap.get("USA")
       if (!usa) {
-        return state.snapshot
+        return
       }
-      let dates = Array.from(usa.metadata.keys())
+
+      useGlobal = useGlobal ?? false
+      let dataSource = useGlobal ? usa : state.datasetMap.get(label)
+
+      let dates = Array.from(dataSource.metadata.keys())
       dates.sort()
       dates.reverse()
       let lastDate = dates[0]
-
       let date = state.snapshotDate ?? lastDate
-      let data = {
-        lastModified: usa.metadata.get(date).lastModified,
-        totalTestResults: usa.metadata.get(date).totalTestResults ?? 0,
-        positive: usa.metadata.get(date).positive ?? 0,
-        death: usa.metadata.get(date).death ?? 0,
+
+      // TODO: De-uglify the processing to include/exclude country-wide numbers
+      if (label === "USA" && state.snapshotStates.size > 0) {
+        return;
+      } else if (state.snapshotStates.size >= 1 && state.snapshotStates.has("USA")) {
+        state.snapshot.totalTestResults -= usa.metadata.get(date).totalTestResults
+        state.snapshot.positive -= usa.metadata.get(date).positive
+        state.snapshot.death -= usa.metadata.get(date).death
+        state.snapshotStates.delete("USA")
       }
-      data.percentTested  = data.totalTestResults / state.usPopulation
-      data.percentPositive = data.positive / data.totalTestResults
-      data.percentDead = data.death / data.positive
-      state.snapshot = data;
+
+      state.snapshot.lastModified = dataSource.metadata.get(date).lastModified
+      state.snapshot.totalTestResults += dataSource.metadata.get(date).totalTestResults ?? 0
+      state.snapshot.positive += dataSource.metadata.get(date).positive ?? 0
+      state.snapshot.death += dataSource.metadata.get(date).death ?? 0
+
+      let population = 0
+      if (useGlobal || label === "USA") {
+        population = state.usPopulation
+      } else {
+        let populationData = USPopulations.data.find(
+          (item) => item["State"].toLowerCase() === USStates[label].toLowerCase())
+        population = populationData ? populationData["Population"] : 0
+      }
+      state.snapshot.population += population
+
+      state.snapshot.percentTested  = state.snapshot.totalTestResults / population
+      state.snapshot.percentPositive = state.snapshot.positive / state.snapshot.totalTestResults
+      state.snapshot.percentDead = state.snapshot.death / state.snapshot.positive
+
+      if (label) {
+        state.snapshotStates.add(label)
+      }
     },
-    [SET_US_DATA] (state, usData) {
+    [SET_STATES_DATA] (state, {statesData, label}) {
       let labelSet = new Set();
       // state.datasetMap = new Map();
-      usData.forEach(function(d) {
+      statesData.forEach(function(d, i) {
+        let identifier = label ? label : d.state
         labelSet.add(d.date);
-        if (!state.datasetMap.has("USA")) {
-          let stateColor = getRandomColorRgb();
-          state.datasetMap.set("USA", {
-            label: "USA",
+        if (!state.datasetMap.has(identifier)) {
+          let stateColor = getColor(i);
+          state.datasetMap.set(identifier, {
+            label: identifier,
             data: [],
             metadata: new Map(),
             borderColor: stateColor,
             backgroundColor: stateColor,
-            // hidden: d.state != "NY" && d.state != "MD",
+            hidden: identifier != "USA",
             fill: false,
           })
         }
-        let metadata = state.datasetMap.get("USA").metadata;
-        metadata.set(d.date, {
-          totalTestResultsIncrease: d.totalTestResultsIncrease,
-          positiveIncrease : d.positiveIncrease,
-          deathIncrease: d.deathIncrease,
-          totalTestResults: d.totalTestResults,
-          positive: d.positive,
-          death: d.death,
-          lastModified: d.dateChecked,
-        });
-      });
-      state.dates = Array.from(labelSet);
-      state.dates.sort();
-    },
-    [SET_STATES_DATA] (state, statesData) {
-      let labelSet = new Set();
-      // state.datasetMap = new Map();
-      statesData.forEach(function(d) {
-        labelSet.add(d.date);
-        if (!state.datasetMap.has(d.state)) {
-          let stateColor = getRandomColorRgb();
-          state.datasetMap.set(d.state, {
-            label: d.state,
-            data: [],
-            metadata: new Map(),
-            borderColor: stateColor,
-            backgroundColor: stateColor,
-            hidden: d.state != "NY" && d.state != "MD",
-            fill: false,
-          })
-        }
-        let metadata = state.datasetMap.get(d.state).metadata;
+        let metadata = state.datasetMap.get(identifier).metadata;
         metadata.set(d.date, {
           totalTestResultsIncrease: d.totalTestResultsIncrease,
           positiveIncrease : d.positiveIncrease,
@@ -177,8 +180,13 @@ export default new Vuex.Store({
     [TOGGLE_STATE_HIDDEN] (state, { label }) {
       state.datasetMap.get(label).hidden = !state.datasetMap.get(label).hidden;
     },
-    [SET_SNAPSHOT_DATE] (state, { date }) {
-      state.snapshotDate = date;
+    [SET_SNAPSHOT_LABEL] (state, { date, label }) {
+      if (state.snapshotDate !== date
+          || (state.snapshotDate === date && state.snapshotStates.has(label))) {
+        state.snapshotDate = date;
+        state.snapshot = getDefaultSnapshot();
+        state.snapshotStates = new Set();
+      }
     },
     [SET_CHART_TYPE] (state, chartType) {
       state.chartType = chartType;
@@ -192,9 +200,9 @@ export default new Vuex.Store({
           return response.json();
         })
         .then((data) => {
-          context.commit(SET_US_DATA, data);
+          context.commit(SET_STATES_DATA, {statesData: data, label: "USA"});
           context.commit(SET_CHART_DATA, {});
-          context.commit(SET_US_SNAPSHOT);
+          context.commit(SET_SNAPSHOT, { useGlobal: true });
         });
     },
     retrieveStatesData (context) {
@@ -204,7 +212,7 @@ export default new Vuex.Store({
           return response.json();
         })
         .then((data) => {
-          context.commit(SET_STATES_DATA, data);
+          context.commit(SET_STATES_DATA, {statesData: data});
           context.commit(SET_CHART_DATA, {});
         });
     },
@@ -218,9 +226,9 @@ export default new Vuex.Store({
       context.commit(TOGGLE_STATE_HIDDEN, { label: label })
       context.commit(SET_CHART_DATA, {});
     },
-    setSnapshotDate (context, { date }) {
-      context.commit(SET_SNAPSHOT_DATE, { date: date })
-      context.commit(SET_US_SNAPSHOT)
+    setSnapshotLabel (context, { date, label }) {
+      context.commit(SET_SNAPSHOT_LABEL, { date: date, label: label })
+      context.commit(SET_SNAPSHOT, { label: label })
     },
     setChartType (context, chartType) {
       let chart = "positiveIncrease";

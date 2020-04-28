@@ -5,6 +5,7 @@
                 <div>
                     <p class="heading">Date</p>
                     <p class="title">{{ lastModified }}</p>
+                    <p>{{ snapshotStatesStr }}</p>
                 </div>
             </div>
             <div class="level-item has-text-centered">
@@ -53,6 +54,11 @@
          percentDead: function () {
              return this.$store.state.snapshot.percentDead.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
+         snapshotStatesStr: function() {
+             let states = Array.from(this.$store.state.snapshotStates)
+             const statesStr = "In " + states.join(", ")
+             return states.length > 0 ? statesStr : "USA"
+         }
      },
      mounted () {
      }

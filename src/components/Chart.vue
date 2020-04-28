@@ -74,6 +74,7 @@
                               return state.label.toLowerCase().includes(phrase)
                                   || this.getStateName(state.label).toLowerCase().includes(phrase)
                           })
+             l.sort((a, b) => a.label > b.label)
              l.sort((a, b) => a.hidden > b.hidden)
              return l
          },
@@ -118,7 +119,9 @@
                                  label += ': ';
                              }
                              label += Math.round(tooltipItem.yLabel * 100) / 100;
-                             app.$store.dispatch("setSnapshotDate", {date: tooltipItem.xLabel})
+                             app.$store.dispatch("setSnapshotLabel",
+                                                 {date: tooltipItem.xLabel,
+                                                  label: data.datasets[tooltipItem.datasetIndex].label})
                              return label;
                          }
                      }
@@ -138,8 +141,6 @@
                              labelString: 'Growth Factor',
                          },
                          gridLines: {
-                             // drawBorder: true,
-                             // color: ['green']
                          },
                          ticks: {
                              // min: -1,
@@ -185,8 +186,6 @@
              return this.selectedChart === chartType
          }
      },
-     mounted () {
-     }
  }
 </script>
 
