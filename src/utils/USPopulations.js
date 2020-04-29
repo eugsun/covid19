@@ -436,6 +436,14 @@ export default {
             "ID Year": 2018,
             "State": "Puerto Rico",
             "ID State": "04000US72"
+        },
+        // AS population from Wikipedia: https://en.wikipedia.org/wiki/American_Samoa
+        {
+            "Slug State": "american-samoa",
+            "Population": 55212,
+            "Year": "2020",
+            "ID Year": 2020,
+            "State": "American Samoa"
         }
     ]
 }

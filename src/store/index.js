@@ -6,7 +6,7 @@ import USPopulations from "@/utils/USPopulations"
 import USStates from "@/utils/USStates"
 
 import { SET_SNAPSHOT, SET_STATES_DATA, SET_CHART_DATA,
-         TOGGLE_STATE_HIDDEN, SET_SNAPSHOT_LABEL, SET_CHART_TYPE } from "./mutations.js"
+         TOGGLE_STATE_HIDDEN, CLEAR_SNAPSHOT, SET_CHART_TYPE } from "./mutations.js"
 
 Vue.use(Vuex)
 
@@ -25,6 +25,9 @@ function getDefaultSnapshot() {
     percentTested: 0,
     percentPositive: 0,
     percentDead: 0,
+    totalTestResultsIncrease: 0,
+    positiveIncrease : 0,
+    deathIncrease: 0,
   };
 }
 
@@ -75,7 +78,11 @@ export default new Vuex.Store({
       state.snapshot.totalTestResults += dataSource.metadata.get(date).totalTestResults ?? 0
       state.snapshot.positive += dataSource.metadata.get(date).positive ?? 0
       state.snapshot.death += dataSource.metadata.get(date).death ?? 0
+      state.snapshot.totalTestResultsIncrease += dataSource.metadata.get(date).totalTestResultsIncrease ?? 0
+      state.snapshot.positiveIncrease += dataSource.metadata.get(date).positiveIncrease ?? 0
+      state.snapshot.deathIncrease += dataSource.metadata.get(date).deathIncrease ?? 0
 
+      // Use the states' combined population instead of the US population
       let population = 0
       if (useGlobal || label === "USA") {
         population = state.usPopulation
@@ -86,7 +93,7 @@ export default new Vuex.Store({
       }
       state.snapshot.population += population
 
-      state.snapshot.percentTested  = state.snapshot.totalTestResults / population
+      state.snapshot.percentTested  = state.snapshot.totalTestResults / state.snapshot.population
       state.snapshot.percentPositive = state.snapshot.positive / state.snapshot.totalTestResults
       state.snapshot.percentDead = state.snapshot.death / state.snapshot.positive
 
@@ -108,7 +115,7 @@ export default new Vuex.Store({
             metadata: new Map(),
             borderColor: stateColor,
             backgroundColor: stateColor,
-            hidden: identifier != "USA",
+            hidden: true,
             fill: false,
           })
         }
@@ -149,10 +156,9 @@ export default new Vuex.Store({
         for (let i = 1; i < dataset.data.length; i++) {
           originals.push(dataset.data[i]);
 
-          let transformed = prev < 0.1 ?
+          let transformed = prev < 0.001 ?
               1 : dataset.data[i] * 1.0 / prev;
           prev = dataset.data[i];
-          dataset.data[i] = transformed;
           growthFactors.push(transformed);
         }
         let n = state.chartConfig.movingAvgDays;
@@ -177,10 +183,17 @@ export default new Vuex.Store({
         datasets: datasets,
       };
     },
-    [TOGGLE_STATE_HIDDEN] (state, { label }) {
-      state.datasetMap.get(label).hidden = !state.datasetMap.get(label).hidden;
+    [TOGGLE_STATE_HIDDEN] (state, { label, isHidden }) {
+      if (!state.datasetMap.has(label)) {
+        return
+      }
+      if (isHidden !== undefined) {
+        state.datasetMap.get(label).hidden = isHidden;
+      } else {
+        state.datasetMap.get(label).hidden = !state.datasetMap.get(label).hidden;
+      }
     },
-    [SET_SNAPSHOT_LABEL] (state, { date, label }) {
+    [CLEAR_SNAPSHOT] (state, { date, label }) {
       if (state.snapshotDate !== date
           || (state.snapshotDate === date && state.snapshotStates.has(label))) {
         state.snapshotDate = date;
@@ -222,12 +235,12 @@ export default new Vuex.Store({
         movingAvgDays: movingAvgDays,
       });
     },
-    toggleStateHidden (context, { label }) {
-      context.commit(TOGGLE_STATE_HIDDEN, { label: label })
+    toggleStateHidden (context, { label, isHidden }) {
+      context.commit(TOGGLE_STATE_HIDDEN, { label: label, isHidden: isHidden })
       context.commit(SET_CHART_DATA, {});
     },
-    setSnapshotLabel (context, { date, label }) {
-      context.commit(SET_SNAPSHOT_LABEL, { date: date, label: label })
+    setSnapshotForLabel (context, { date, label }) {
+      context.commit(CLEAR_SNAPSHOT, { date: date, label: label })
       context.commit(SET_SNAPSHOT, { label: label })
     },
     setChartType (context, chartType) {

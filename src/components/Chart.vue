@@ -63,6 +63,7 @@
 
  export default {
      name: 'Chart',
+     props: ["chartType", "activeStates"],
      computed: {
          chartData: function () {
              return this.$store.state.chartData;
@@ -97,7 +98,6 @@
          return {
              autocompleteState: "",
              filterStateMap: new Map(),
-
              loaded: false,
              lookbackDays: 30,
              movingAvgDays: 7,
@@ -119,7 +119,7 @@
                                  label += ': ';
                              }
                              label += Math.round(tooltipItem.yLabel * 100) / 100;
-                             app.$store.dispatch("setSnapshotLabel",
+                             app.$store.dispatch("setSnapshotForLabel",
                                                  {date: tooltipItem.xLabel,
                                                   label: data.datasets[tooltipItem.datasetIndex].label})
                              return label;
@@ -164,8 +164,22 @@
              })
          },
          toggleHidden: function (index) {
+             let label = this.availableStates[index].label
+
+             // URL edit
+             let activeStates = this.activeStates;
+             if (this.availableStates[index].hidden === true) {
+                 if (!activeStates.includes(label)) {
+                     activeStates += activeStates.length > 0 ? `,${label}` : label
+                 }
+             } else {
+                 activeStates = activeStates.replace(label, "").replace(",,", ",").replace(/^,|,$/g, "")
+             }
+             this.$router.push({ query: { chartType: this.chartType, activeStates: activeStates} })
+
+             // State edit
              this.$store.dispatch("toggleStateHidden", {
-                 label: this.availableStates[index].label
+                 label: label
              });
              this.autocompleteState = "";
          },
@@ -181,11 +195,24 @@
          },
          setChart: function (chartType) {
              this.$store.dispatch("setChartType", chartType)
+             this.$router.push({ query: { chartType: chartType, activeStates: this.activeStates } })
          },
          isChart: function (chartType) {
              return this.selectedChart === chartType
          }
      },
+     mounted () {
+         this.$store.dispatch("setChartType", this.chartType)
+         if (this.activeStates) {
+             this.activeStates.split(",").forEach((state) => {
+                 if (state.length == 2 || state.length == 3) {
+                     this.$store.dispatch("toggleStateHidden", {
+                         label: state, isHidden: false
+                     });
+                 }
+             })
+         }
+     }
  }
 </script>
 
