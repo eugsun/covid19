@@ -58,8 +58,8 @@
 </template>
 
 <script>
- import LineChart from "./LineChart.js"
- import US_STATES from "./USStates.js"
+ import LineChart from "@/components/LineChart.js"
+ import USStates from "@/utils/USStates.js"
 
  export default {
      name: 'Chart',
@@ -177,7 +177,7 @@
              });
          },
          getStateName: function (abbrev) {
-             return US_STATES[abbrev];
+             return USStates[abbrev];
          },
          setChart: function (chartType) {
              this.$store.dispatch("setChartType", chartType)

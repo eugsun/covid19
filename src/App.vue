@@ -13,8 +13,8 @@
 </template>
 
 <script>
- import Dashboard from './components/Dashboard.vue'
- import Chart from './components/Chart.vue'
+ import Dashboard from '@/components/Dashboard'
+ import Chart from '@/components/Chart'
 
  export default {
      name: 'App',

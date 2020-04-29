@@ -1,3 +1,6 @@
+/**
+ * Credits: https://datausa.io/api/data?drilldowns=State&measures=Population&year=latest
+ */
 export default {
     "source": [
         {

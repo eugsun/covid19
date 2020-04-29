@@ -1,5 +1,5 @@
 /**
- * Credits to http://google.github.io/palette.js/ for the mpn56 color palette.
+ * Credits: http://google.github.io/palette.js/ for the mpn56 color palette.
  */
 export default {
     name: "mpn65",

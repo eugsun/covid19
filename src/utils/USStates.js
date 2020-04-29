@@ -1,3 +1,6 @@
+/**
+ * Credits: https://gist.github.com/mshafrir/2646763
+ */
 export default {
     "USA": "USA",
     "AL": "Alabama",

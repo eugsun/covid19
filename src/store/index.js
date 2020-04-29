@@ -1,9 +1,9 @@
 import Vue from "vue"
 import Vuex from "vuex"
 
-import ColorPalette from "@/components/ColorPalette"
-import USPopulations from "@/components/USPopulations"
-import USStates from "@/components/USStates"
+import ColorPalette from "@/utils/ColorPalette"
+import USPopulations from "@/utils/USPopulations"
+import USStates from "@/utils/USStates"
 
 import { SET_SNAPSHOT, SET_STATES_DATA, SET_CHART_DATA,
          TOGGLE_STATE_HIDDEN, SET_SNAPSHOT_LABEL, SET_CHART_TYPE } from "./mutations.js"
