@@ -6,7 +6,8 @@ import USPopulations from "@/utils/USPopulations"
 import USStates from "@/utils/USStates"
 
 import { SET_SNAPSHOT_DATE, SET_STATES_DATA, SET_CHART_DATA,
-         TOGGLE_STATE_HIDDEN, SET_CHART_TYPE, TOGGLE_US_SELECT } from "./mutations.js"
+         TOGGLE_STATE_HIDDEN, SET_CHART_TYPE, TOGGLE_US_SELECT,
+         SET_REGION } from "./mutations.js"
 
 Vue.use(Vuex)
 
@@ -21,6 +22,7 @@ export default new Vuex.Store({
 
     selectedStates: [],
     isUSSelected: true,
+    region: "",
 
     dates: [],
     dataset: {
@@ -62,7 +64,10 @@ export default new Vuex.Store({
 
       if (state.selectedStates.length > 0) {
         result.population = state.selectedStates.map((label) => USStates[label].toLowerCase())
-                                 .map((name) => USPopulations.data.find((item) => item["State"].toLowerCase() === name)["Population"])
+                                 .map((name) => {
+                                   const popItem = USPopulations.data.find((item) => item["State"].toLowerCase() === name)
+                                   return popItem ? popItem["Population"] : 0
+                                 })
                                  .reduce((acc, curr) => (acc ?? 0) + (curr ?? 0))
       } else {
         result.population = 330579861  // From somewhere on the interwebs
@@ -87,7 +92,6 @@ export default new Vuex.Store({
         result.positiveIncrease = usa.metadata.get(date).positiveIncrease
         result.deathIncrease = usa.metadata.get(date).deathIncrease
       }
-
       result.percentTested  = result.totalTestResults / result.population
       result.percentPositive = result.positive / result.totalTestResults
       result.percentDead = result.death / result.positive
@@ -214,6 +218,56 @@ export default new Vuex.Store({
       if (state.dataset.us) {
         state.dataset.us.hidden = !value
       }
+    },
+    [SET_REGION] (state, value) {
+      let states = Array.from(state.dataset.states.keys())
+      const date = state.snapshotDate
+      let populations =
+          states.map((label) => USStates[label].toLowerCase())
+                .map((name) => {
+                  const popItem =
+                  USPopulations.data.find((item) => item["State"].toLowerCase() === name)
+                  return popItem ? popItem["Population"] : 0
+                })
+      let transformed = states.map((label, index) => {
+        let result = { label: label, population: populations[index] }
+        let dataSource = state.dataset.states.get(label)
+        result.totalTestResults = dataSource.metadata.get(date).totalTestResults ?? 0
+        result.positive = dataSource.metadata.get(date).positive ?? 0
+        result.death = dataSource.metadata.get(date).death ?? 0
+        result.percentTested  = result.totalTestResults / result.population
+        result.percentPositive = result.positive / result.totalTestResults
+        result.percentDead = result.death / result.positive
+        return result
+      })
+      transformed = transformed.filter(result => result.population > 100 && result.positive > 100)
+
+      switch (value) {
+        case "high-test":
+          transformed.sort((a, b) => a.percentTested < b.percentTested)
+          break
+        case "low-test":
+          transformed.sort((a, b) => a.percentTested > b.percentTested)
+          break
+        case "high-positive":
+          transformed.sort((a, b) => a.percentPositive < b.percentPositive)
+          break
+        case "low-positive":
+          transformed.sort((a, b) => a.percentPositive > b.percentPositive)
+          break
+        case "high-death":
+          transformed.sort((a, b) => a.percentDead < b.percentDead)
+          break
+        case "low-death":
+          transformed.sort((a, b) => a.percentDead > b.percentDead)
+          break
+      }
+
+      state.selectedStates = transformed.slice(0, 5).map((state) => state.label)
+      state.dataset.states.forEach((val, key) => {
+        val.hidden = state.selectedStates.includes(key) ? false : true
+      })
+      state.region = value
     }
   },
   actions: {
@@ -268,6 +322,13 @@ export default new Vuex.Store({
     },
     toggleUSSelect (context, value) {
       context.commit(TOGGLE_US_SELECT, value)
+      context.commit(SET_CHART_DATA, {})
+    },
+    setRegion ( context, region ) {
+      if (region === "") {
+        return
+      }
+      context.commit(SET_REGION, region)
       context.commit(SET_CHART_DATA, {})
     }
   },

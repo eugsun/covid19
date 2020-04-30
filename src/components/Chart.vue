@@ -2,7 +2,7 @@
     <section id="chart">
         <div class="container">
             <div class="columns">
-                <div class="column is-two-thirds">
+                <div class="column is-9">
                     <div class="panel">
                         <div class="panel-tabs">
                             <a v-bind:class="{ 'is-active': isChart('tests') }" v-on:click="setChart('tests')">Tests</a>
@@ -33,13 +33,26 @@
                         </div>
                     </div>
                 </div>
-                <div class="column is-one-third">
+                <div class="column is-3">
                     <div class="panel" >
                         <div class="panel-block">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="isUSSelected"/>
                             </label>
                             Show US Aggregate
+                        </div>
+                        <div class="panel-block">
+                            <span class="select">
+                                <select v-model="regions">
+                                    <option value="">Select Regions</option>
+                                    <option value="high-test">Highest Test Coverage</option>
+                                    <option value="low-test">Lowest Test Coverage</option>
+                                    <option value="high-positive">Highest % Positive</option>
+                                    <option value="low-positive">Low % Positive</option>
+                                    <option value="high-death">Highest Death Rate</option>
+                                    <option value="low-death">Lowest Death Rate</option>
+                                </select>
+                            </span>
                         </div>
                         <div class="panel-block">
                             <input class="input is-primary" type="text" placeholder="Search State" v-model="autocompleteState" />
@@ -104,6 +117,17 @@
              },
              set (value) {
                  this.$store.dispatch("toggleUSSelect", value)
+             }
+         },
+         regions: {
+             get () {
+                 return this.$store.state.region
+             },
+             set (value) {
+                 this.$store.dispatch("setRegion", value).then(() => {
+                     this.$router.push({ query: { chartType: this.chartType,
+                                                  activeStates: this.$store.state.selectedStates.join(",")} })
+                 })
              }
          }
      },

@@ -30,7 +30,8 @@
          },
          chartKey: function () {
              let datasets = this.$store.state.chartData.datasets ?? []
-             return `chart:${datasets.length}`
+             let numSelectedStates = this.$store.state.selectedStates.size
+             return `chart:${datasets.length}:${numSelectedStates}`
          }
      },
      components: {

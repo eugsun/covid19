@@ -5,3 +5,4 @@ export const SET_CHART_DATA = "setChartData";
 export const TOGGLE_STATE_HIDDEN = "toggleStateHidden";
 export const TOGGLE_US_SELECT = "toggleUSSelect";
 export const SET_CHART_TYPE = "setChartType";
+export const SET_REGION= "setRegion";
