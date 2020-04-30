@@ -47,7 +47,9 @@ export default new Vuex.Store({
     chartData: {},
     chartType: "positiveIncrease",
   },
-  getters: {},
+  getters: {
+
+  },
   mutations: {
     [SET_SNAPSHOT] (state, { useGlobal, label }) {
       let usa = state.datasetMap.get("USA")
@@ -71,6 +73,9 @@ export default new Vuex.Store({
         state.snapshot.totalTestResults -= usa.metadata.get(date).totalTestResults
         state.snapshot.positive -= usa.metadata.get(date).positive
         state.snapshot.death -= usa.metadata.get(date).death
+        state.snapshot.totalTestResultsIncrease -= usa.metadata.get(date).totalTestResultsIncrease
+        state.snapshot.positiveIncrease -= usa.metadata.get(date).positiveIncrease
+        state.snapshot.deathIncrease -= usa.metadata.get(date).deathIncrease
         state.snapshotStates.delete("USA")
       }
 
@@ -219,7 +224,7 @@ export default new Vuex.Store({
         });
     },
     retrieveStatesData (context) {
-      const api = "https://covidtracking.com/api/states/daily";
+      const api = "https://covidtracking.com/api/v1/states/daily.json";
       fetch(api)
         .then((response) => {
           return response.json();
@@ -238,6 +243,8 @@ export default new Vuex.Store({
     toggleStateHidden (context, { label, isHidden }) {
       context.commit(TOGGLE_STATE_HIDDEN, { label: label, isHidden: isHidden })
       context.commit(SET_CHART_DATA, {});
+
+      context.commit(SET_SNAPSHOT, { label: label })
     },
     setSnapshotForLabel (context, { date, label }) {
       context.commit(CLEAR_SNAPSHOT, { date: date, label: label })

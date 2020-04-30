@@ -22,7 +22,8 @@
      computed: {
          dashKey: function () {
              let datasets = this.$store.state.chartData.datasets ?? []
-             return `dash:${datasets.length}`
+             let numStates = this.$store.state.snapshotStates.size
+             return `dash:${datasets.length}:${numStates}`
          },
          chartKey: function () {
              let datasets = this.$store.state.chartData.datasets ?? []

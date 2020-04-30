@@ -169,17 +169,19 @@
              // URL edit
              let activeStates = this.activeStates;
              if (this.availableStates[index].hidden === true) {
+                 // Show
                  if (!activeStates.includes(label)) {
                      activeStates += activeStates.length > 0 ? `,${label}` : label
                  }
              } else {
+                 // Hide
                  activeStates = activeStates.replace(label, "").replace(",,", ",").replace(/^,|,$/g, "")
              }
              this.$router.push({ query: { chartType: this.chartType, activeStates: activeStates} })
 
              // State edit
              this.$store.dispatch("toggleStateHidden", {
-                 label: label
+                 label: label, isHidden: !this.availableStates[index].hidden
              });
              this.autocompleteState = "";
          },
