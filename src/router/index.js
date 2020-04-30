@@ -10,7 +10,7 @@ const routes = [
     component: () => import("@/views/Home"),
     props: (route) => ({
       chartType: route.query.chartType ?? "cases",
-      activeStates: route.query.activeStates ?? "USA"
+      activeStates: route.query.activeStates ?? ""
     })
   }
 ]

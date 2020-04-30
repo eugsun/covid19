@@ -40,24 +40,27 @@
  export default {
      name: 'Dashboard',
      computed: {
-         date: function () { return this.$store.state.snapshot.lastModified.split('T')[0] },
-         totalTests: function () { return this.$store.state.snapshot.totalTestResults.toLocaleString() },
-         totalPositives: function () { return this.$store.state.snapshot.positive.toLocaleString() },
-         totalDeaths: function () { return this.$store.state.snapshot.death.toLocaleString() },
-         testIncrease: function () { return this.$store.state.snapshot.totalTestResultsIncrease.toLocaleString() },
-         positiveIncrease: function () { return this.$store.state.snapshot.positiveIncrease.toLocaleString() },
-         deathIncrease: function () { return this.$store.state.snapshot.deathIncrease.toLocaleString() },
+         date: function () {
+             const dateStr = this.$store.state.snapshotDate.toString()
+             return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6)}`
+         },
+         totalTests: function () { return this.$store.getters.snapshot.totalTestResults.toLocaleString() },
+         totalPositives: function () { return this.$store.getters.snapshot.positive.toLocaleString() },
+         totalDeaths: function () { return this.$store.getters.snapshot.death.toLocaleString() },
+         testIncrease: function () { return this.$store.getters.snapshot.totalTestResultsIncrease.toLocaleString() },
+         positiveIncrease: function () { return this.$store.getters.snapshot.positiveIncrease.toLocaleString() },
+         deathIncrease: function () { return this.$store.getters.snapshot.deathIncrease.toLocaleString() },
          percentTested: function () {
-             return this.$store.state.snapshot.percentTested.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
+             return this.$store.getters.snapshot.percentTested.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
          percentPositive: function () {
-             return this.$store.state.snapshot.percentPositive.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
+             return this.$store.getters.snapshot.percentPositive.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
          percentDead: function () {
-             return this.$store.state.snapshot.percentDead.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
+             return this.$store.getters.snapshot.percentDead.toLocaleString('en', {style: 'percent', minimumFractionDigits: 2})
          },
          snapshotStatesStr: function() {
-             let states = Array.from(this.$store.state.snapshotStates)
+             let states = Array.from(this.$store.state.selectedStates)
              const statesStr = "In " + states.join(", ")
              return states.length > 0 ? statesStr : "USA"
          }

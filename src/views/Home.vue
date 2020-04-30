@@ -1,5 +1,5 @@
 <template>
-    <div id="home">
+    <div id="home" v-if="ready">
         <Dashboard :key="dashKey" />
         <Chart v-bind:chart-type="chartType" v-bind:active-states="activeStates" :key="chartKey" />
         <footer class="footer">
@@ -19,11 +19,14 @@
  export default {
      name: 'App',
      props: ["chartType", "activeStates"],
+     data: () => ({
+         ready: false
+     }),
      computed: {
          dashKey: function () {
              let datasets = this.$store.state.chartData.datasets ?? []
-             let numStates = this.$store.state.snapshotStates.size
-             return `dash:${datasets.length}:${numStates}`
+             let numSelectedStates = this.$store.state.selectedStates.size
+             return `dash:${datasets.length}:${numSelectedStates}`
          },
          chartKey: function () {
              let datasets = this.$store.state.chartData.datasets ?? []
@@ -36,6 +39,8 @@
      mounted () {
          this.$store.dispatch("retrieveUSData").then(() => {
              this.$store.dispatch("retrieveStatesData");
+         }).then(() => {
+             this.ready = true;
          });
      }
  }

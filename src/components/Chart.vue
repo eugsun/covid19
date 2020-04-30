@@ -36,6 +36,12 @@
                 <div class="column is-one-third">
                     <div class="panel" >
                         <div class="panel-block">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="isUSSelected"/>
+                            </label>
+                            Show US Aggregate
+                        </div>
+                        <div class="panel-block">
                             <input class="input is-primary" type="text" placeholder="Search State" v-model="autocompleteState" />
                         </div>
                         <div id="state-selection">
@@ -69,7 +75,7 @@
              return this.$store.state.chartData;
          },
          availableStates: function () {
-             let l = Array.from(this.$store.state.datasetMap.values())
+             let l = Array.from(this.$store.state.dataset.states.values())
                           .filter((state) => {
                               const phrase = this.autocompleteState.toLowerCase()
                               return state.label.toLowerCase().includes(phrase)
@@ -90,6 +96,14 @@
                      return "deaths"
                  default:
                      return "cases"
+             }
+         },
+         isUSSelected: {
+             get () {
+                 return this.$store.state.isUSSelected
+             },
+             set (value) {
+                 this.$store.dispatch("toggleUSSelect", value)
              }
          }
      },
@@ -214,6 +228,7 @@
                  }
              })
          }
+         this.$store.dispatch("toggleUSSelect", this.isUSSelected);
      }
  }
 </script>
