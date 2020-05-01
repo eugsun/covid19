@@ -24,20 +24,23 @@
      }),
      computed: {
          dashKey: function () {
-             let datasets = this.$store.state.chartData.datasets ?? []
+             let usLoaded = this.$store.state.dataset.us ? "us-loaded" : "us-not-loaded"
+             let numStatesLoaded = this.$store.state.dataset.states.length
              let numSelectedStates = this.$store.state.selectedStates.size
-             return `dash:${datasets.length}:${numSelectedStates}`
+             return `dash:${usLoaded}:${numStatesLoaded}:${numSelectedStates}`
          },
          chartKey: function () {
-             let datasets = this.$store.state.chartData.datasets ?? []
+             let usLoaded = this.$store.state.dataset.us ? "us-loaded" : "us-not-loaded"
+             let numStatesLoaded = this.$store.state.dataset.states.length
              let numSelectedStates = this.$store.state.selectedStates.size
-             return `chart:${datasets.length}:${numSelectedStates}`
+             return `chart:${usLoaded}:${numStatesLoaded}:${numSelectedStates}`
          }
      },
      components: {
          Dashboard, Chart
      },
      mounted () {
+         console.log("Mounting HOME")
          this.$store.dispatch("retrieveUSData").then(() => {
              this.$store.dispatch("retrieveStatesData");
          }).then(() => {

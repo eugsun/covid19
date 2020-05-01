@@ -10,16 +10,27 @@
                             <a v-bind:class="{ 'is-active': isChart('deaths') }" v-on:click="setChart('deaths')">Deaths</a>
                         </div>
                         <div id="chart-control">
-                            <div class="columns is-vcentered is-centered has-text-centered">
+                            <div class="columns is-vcentered is-centered">
                                 <div class="column">
+                                        <label class="radio" for="compareMode">
+                                            <input type="radio" id="compareMode" value="compare" v-model="displayMode">
+                                            Compare Mode
+                                        </label>
+                                        <br>
+                                        <label class="radio" for="combineMode">
+                                            <input type="radio" id="combineMode" value="combine" v-model="displayMode">
+                                            Combine Mode
+                                        </label>
+                                </div>
+                                <div class="column has-text-centered">
                                     <p>Lookback Days: {{ lookbackDays }}</p>
                                     <p><input class="slider is-fullwidth is-info is-circle" v-model="lookbackDays" type="range" min="7" max="60"></p>
                                 </div>
-                                <div class="column">
-                                    <p>Trailing Moving Average Days: {{ movingAvgDays }}</p>
+                                <div class="column has-text-centered">
+                                    <p>Trailing Average Days: {{ movingAvgDays }}</p>
                                     <p><input class="slider is-fullwidth is-info is-circle" v-model="movingAvgDays" type="range" min="1" max="14"></p>
                                 </div>
-                                <div class="column">
+                                <div class="column has-text-right">
                                     <button class="button is-primary" v-on:click="render">Update</button>
                                 </div>
                             </div>
@@ -42,13 +53,17 @@
                             Show US Aggregate
                         </div>
                         <div class="panel-block">
+                            <span>
+                                <input v-model="numRegionStates" id="num-region-states"
+                                       class="input" type="number" min="1" max="20"/>
+                            </span>
                             <span class="select">
                                 <select v-model="regions">
-                                    <option value="">Select Regions</option>
+                                    <option value="">Regions</option>
                                     <option value="high-test">Highest Test Coverage</option>
                                     <option value="low-test">Lowest Test Coverage</option>
                                     <option value="high-positive">Highest % Positive</option>
-                                    <option value="low-positive">Low % Positive</option>
+                                    <option value="low-positive">Lowest % Positive</option>
                                     <option value="high-death">Highest Death Rate</option>
                                     <option value="low-death">Lowest Death Rate</option>
                                 </select>
@@ -119,17 +134,38 @@
                  this.$store.dispatch("toggleUSSelect", value)
              }
          },
+         displayMode: {
+             get () {
+                 return this.$store.state.displayMode
+             },
+             set (value) {
+                 this.$store.dispatch("setDisplayMode", value)
+             }
+         },
+         numRegionStates: {
+             get () {
+                 return this.$store.state.numRegionStates
+             },
+             set (value) {
+                 const region = this.$store.state.region
+                 this.$store.dispatch("setRegion", {region, numRegionStates: value}).then(() => {
+                     this.$router.push({ query: { chartType: this.chartType,
+                                                  activeStates: this.$store.state.selectedStates.join(",")} })
+                 })
+             }
+         },
          regions: {
              get () {
                  return this.$store.state.region
              },
              set (value) {
-                 this.$store.dispatch("setRegion", value).then(() => {
+                 const numRegionStates = this.$store.state.numRegionStates
+                 this.$store.dispatch("setRegion", {region: value, numRegionStates}).then(() => {
                      this.$router.push({ query: { chartType: this.chartType,
                                                   activeStates: this.$store.state.selectedStates.join(",")} })
                  })
              }
-         }
+         },
      },
      data: function () {
          let app = this;
@@ -219,7 +255,7 @@
 
              // State edit
              this.$store.dispatch("toggleStateHidden", {
-                 label: label, isHidden: !this.availableStates[index].hidden
+                 label: label, isHidden: !this.availableStates[index].hidden, refresh: true
              });
              this.autocompleteState = "";
          },
@@ -242,29 +278,36 @@
          }
      },
      mounted () {
-         this.$store.dispatch("setChartType", this.chartType)
+         console.log("Mounting Chart")
          if (this.activeStates) {
              this.activeStates.split(",").forEach((state) => {
-                 if (state.length == 2 || state.length == 3) {
-                     this.$store.dispatch("toggleStateHidden", {
-                         label: state, isHidden: false
-                     });
-                 }
+                 this.$store.dispatch("toggleStateHidden", {
+                     label: state, isHidden: false, refresh: false
+                 });
              })
          }
+         this.$store.dispatch("setChartType", this.chartType)
          this.$store.dispatch("toggleUSSelect", this.isUSSelected);
      }
  }
 </script>
 
 <style scoped>
+ #chart {
+     margin-bottom: 2rem;
+ }
+ .select {
+     max-width: 65%;
+ }
+ #num-region-states {
+     min-width: 4rem;
+ }
  #state-selection {
-     height: 40rem;
+     height: 460px;
      overflow-y: scroll;
      overflow-x: hidden;
  }
-
  #chart-control {
-     padding: 1rem 0;
+     padding: 1rem 3rem;
  }
 </style>

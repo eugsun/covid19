@@ -6,3 +6,4 @@ export const TOGGLE_STATE_HIDDEN = "toggleStateHidden";
 export const TOGGLE_US_SELECT = "toggleUSSelect";
 export const SET_CHART_TYPE = "setChartType";
 export const SET_REGION= "setRegion";
+export const SET_DISPLAY_MODE = "setDisplayMode";

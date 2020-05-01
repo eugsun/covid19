@@ -7,7 +7,7 @@ import USStates from "@/utils/USStates"
 
 import { SET_SNAPSHOT_DATE, SET_STATES_DATA, SET_CHART_DATA,
          TOGGLE_STATE_HIDDEN, SET_CHART_TYPE, TOGGLE_US_SELECT,
-         SET_REGION } from "./mutations.js"
+         SET_REGION, SET_DISPLAY_MODE } from "./mutations.js"
 
 Vue.use(Vuex)
 
@@ -22,6 +22,8 @@ export default new Vuex.Store({
 
     selectedStates: [],
     isUSSelected: true,
+
+    numRegionStates: 10,
     region: "",
 
     dates: [],
@@ -37,6 +39,7 @@ export default new Vuex.Store({
     },
     chartData: {},
     chartType: "positiveIncrease",
+    displayMode: "combine"
   },
   getters: {
     snapshot: state => {
@@ -76,12 +79,13 @@ export default new Vuex.Store({
       if (state.selectedStates.length > 0) {
         state.selectedStates.forEach((label) => {
           let dataSource = state.dataset.states.get(label)
-          result.totalTestResults += dataSource.metadata.get(date).totalTestResults ?? 0
-          result.positive += dataSource.metadata.get(date).positive ?? 0
-          result.death += dataSource.metadata.get(date).death ?? 0
-          result.totalTestResultsIncrease += dataSource.metadata.get(date).totalTestResultsIncrease ?? 0
-          result.positiveIncrease += dataSource.metadata.get(date).positiveIncrease ?? 0
-          result.deathIncrease += dataSource.metadata.get(date).deathIncrease ?? 0
+          let dateSpecifics = dataSource.metadata.get(date) || {}
+          result.totalTestResults += dateSpecifics.totalTestResults ?? 0
+          result.positive += dateSpecifics.positive ?? 0
+          result.death += dateSpecifics.death ?? 0
+          result.totalTestResultsIncrease += dateSpecifics.totalTestResultsIncrease ?? 0
+          result.positiveIncrease += dateSpecifics.positiveIncrease ?? 0
+          result.deathIncrease += dateSpecifics.deathIncrease ?? 0
         })
       } else { // if no state is selected, use USA aggregate data
         let usa = state.dataset.us
@@ -114,14 +118,14 @@ export default new Vuex.Store({
       data.forEach(function(d, i) {
         let identifier = label ? label : d.state
         labelSet.add(d.date);
-        let stateColor = label ? "#dddddd" : getColor(i);
+        let color = label ? "#dddddd" : getColor(i);
         if (!newMap.has(identifier)) {
           newMap.set(identifier, {
             label: identifier,
             data: [],
             metadata: new Map(),
-            borderColor: stateColor,
-            backgroundColor: stateColor,
+            borderColor: color,
+            backgroundColor: color,
             hidden: true,
             fill: false,
           })
@@ -149,20 +153,38 @@ export default new Vuex.Store({
       state.chartConfig.movingAvgDays = chartConfig.movingAvgDays ?? state.chartConfig.movingAvgDays;
       state.chartConfig.lookbackDays = chartConfig.lookbackDays ?? state.chartConfig.lookbackDays;
 
-      let datasets = Array.from(state.dataset.states.values());
-      if (state.isUSSelected && state.dataset.us) {
-        datasets.push(state.dataset.us)
-      }
-      datasets.forEach(function(dataset) {
-        // dataset.data.reverse();
+      let datasets = Array.from(state.dataset.states.values()).filter((item) => state.selectedStates.includes(item.label) );
+
+      let prefillData = (dataset) => {
+        dataset.data = []
         state.dates.forEach(function(dateLabel) {
           if (dataset.metadata.has(dateLabel)) {
             dataset.data.push(dataset.metadata.get(dateLabel)[state.chartType]);
           } else {
             dataset.data.push(0);
           }
-        });
+        })
+        return dataset
+      }
+      datasets.forEach(prefillData)
 
+      // If display mode is "combined", add up state data
+      if (datasets.length && state.displayMode === "combine") {
+        datasets = [{
+          label: "Combined",
+          data: datasets.reduce((combined, dataset) => dataset.data.map((val, index) => val + combined[index]),
+                                new Array(state.dates.length).fill(0)),
+          borderColor: "#000000",
+          backgroundColor: "#000000",
+          hidden: false,
+          fill: false,
+        }]
+      }
+      if (state.isUSSelected && state.dataset.us) {
+        datasets.push(prefillData(state.dataset.us))
+      }
+
+      datasets.forEach(function(dataset) {
         let originals = [0];
         let growthFactors = [1];
         let avgGrowthFactors = [];
@@ -171,8 +193,8 @@ export default new Vuex.Store({
         for (let i = 1; i < dataset.data.length; i++) {
           originals.push(dataset.data[i]);
 
-          let transformed = prev < 0.001 ?
-              1 : dataset.data[i] * 1.0 / prev;
+          // For data that doesn't make sense, keep the growth factor flat
+          let transformed = prev < 0.001 ? 1 : dataset.data[i] * 1.0 / prev;
           prev = dataset.data[i];
           growthFactors.push(transformed);
         }
@@ -219,7 +241,7 @@ export default new Vuex.Store({
         state.dataset.us.hidden = !value
       }
     },
-    [SET_REGION] (state, value) {
+    [SET_REGION] (state, {region, numRegionStates}) {
       let states = Array.from(state.dataset.states.keys())
       const date = state.snapshotDate
       let populations =
@@ -232,9 +254,10 @@ export default new Vuex.Store({
       let transformed = states.map((label, index) => {
         let result = { label: label, population: populations[index] }
         let dataSource = state.dataset.states.get(label)
-        result.totalTestResults = dataSource.metadata.get(date).totalTestResults ?? 0
-        result.positive = dataSource.metadata.get(date).positive ?? 0
-        result.death = dataSource.metadata.get(date).death ?? 0
+        let dateSpecifics = dataSource.metadata.get(date) || {}
+        result.totalTestResults = dateSpecifics.totalTestResults ?? 0
+        result.positive = dateSpecifics.positive ?? 0
+        result.death = dateSpecifics.death ?? 0
         result.percentTested  = result.totalTestResults / result.population
         result.percentPositive = result.positive / result.totalTestResults
         result.percentDead = result.death / result.positive
@@ -242,7 +265,7 @@ export default new Vuex.Store({
       })
       transformed = transformed.filter(result => result.population > 100 && result.positive > 100)
 
-      switch (value) {
+      switch (region) {
         case "high-test":
           transformed.sort((a, b) => a.percentTested < b.percentTested)
           break
@@ -261,13 +284,19 @@ export default new Vuex.Store({
         case "low-death":
           transformed.sort((a, b) => a.percentDead > b.percentDead)
           break
+        default:
+          transformed = []
       }
 
-      state.selectedStates = transformed.slice(0, 5).map((state) => state.label)
+      state.selectedStates = transformed.slice(0, numRegionStates).map((state) => state.label)
       state.dataset.states.forEach((val, key) => {
         val.hidden = state.selectedStates.includes(key) ? false : true
       })
-      state.region = value
+      state.numRegionStates = numRegionStates
+      state.region = region
+    },
+    [SET_DISPLAY_MODE] (state, displayMode) {
+      state.displayMode = displayMode
     }
   },
   actions: {
@@ -300,9 +329,11 @@ export default new Vuex.Store({
         movingAvgDays: movingAvgDays,
       });
     },
-    toggleStateHidden (context, { label, isHidden }) {
+    toggleStateHidden (context, { label, isHidden, refresh }) {
       context.commit(TOGGLE_STATE_HIDDEN, { label: label, isHidden: isHidden })
-      context.commit(SET_CHART_DATA, {});
+      if (refresh) {
+        context.commit(SET_CHART_DATA, {});
+      }
     },
     setSnapshotForLabel (context, { date }) {
       context.commit(SET_SNAPSHOT_DATE, date)
@@ -324,11 +355,12 @@ export default new Vuex.Store({
       context.commit(TOGGLE_US_SELECT, value)
       context.commit(SET_CHART_DATA, {})
     },
-    setRegion ( context, region ) {
-      if (region === "") {
-        return
-      }
-      context.commit(SET_REGION, region)
+    setRegion (context, {region, numRegionStates}) {
+      context.commit(SET_REGION, {region, numRegionStates})
+      context.commit(SET_CHART_DATA, {})
+    },
+    setDisplayMode (context, displayMode) {
+      context.commit(SET_DISPLAY_MODE, displayMode)
       context.commit(SET_CHART_DATA, {})
     }
   },
