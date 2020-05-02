@@ -7,39 +7,46 @@ import USStates from "@/utils/USStates"
 
 import { SET_SNAPSHOT_DATE, SET_STATES_DATA, SET_CHART_DATA,
          TOGGLE_STATE_HIDDEN, SET_CHART_TYPE, TOGGLE_US_SELECT,
-         SET_REGION, SET_DISPLAY_MODE } from "./mutations.js"
+         SET_REGION, SET_DISPLAY_MODE, SET_SELECTED_STATES } from "./mutations.js"
 
 Vue.use(Vuex)
 
 function getColor(index) {
-  index = index ?? 0;
+  index = index ?? 0
   return `#${ColorPalette.colors[index]}`
 }
 
 export default new Vuex.Store({
   state: {
-    snapshotDate: "",
+    ready: false,
+    chartReady: false,
 
+    // Set by user
     selectedStates: [],
     isUSSelected: true,
-
-    numRegionStates: 10,
+    chartType: "cases",
+    displayMode: "combine",
     region: "",
+    numRegionStates: 10,
+    chartConfig: {
+      labels: [],
+      movingAvgDays: 7,
+      lookbackDays: 30,
+    },
 
+    // API Data
     dates: [],
     dataset: {
       us: null,
       states: new Map(),
     },
 
-    chartConfig: {
+    // Derived
+    snapshotDate: "",
+    chartData: {
       labels: [],
-      movingAvgDays: 7,
-      lookbackDays: 30,
+      datasets: [],
     },
-    chartData: {},
-    chartType: "positiveIncrease",
-    displayMode: "combine"
   },
   getters: {
     snapshot: state => {
@@ -57,7 +64,7 @@ export default new Vuex.Store({
       }
 
       let usa = state.dataset.us
-      if (!usa) {
+      if (!usa || state.dataset.states.size < 1) {
         return result
       }
       const date = state.snapshotDate
@@ -79,6 +86,9 @@ export default new Vuex.Store({
       if (state.selectedStates.length > 0) {
         state.selectedStates.forEach((label) => {
           let dataSource = state.dataset.states.get(label)
+          if (!dataSource) {
+            return
+          }
           let dateSpecifics = dataSource.metadata.get(date) || {}
           result.totalTestResults += dateSpecifics.totalTestResults ?? 0
           result.positive += dateSpecifics.positive ?? 0
@@ -105,20 +115,22 @@ export default new Vuex.Store({
   mutations: {
     [SET_SNAPSHOT_DATE] (state, date) {
       if (date === undefined) {
-        let dates = Array.from(state.dataset.us.metadata.keys())
-        dates.sort()
+        const dates = [...state.dates]
         state.snapshotDate = dates.pop()
       } else {
         state.snapshotDate = date
       }
+    },
+    [SET_SELECTED_STATES] (state, states) {
+      state.selectedStates = states
     },
     [SET_STATES_DATA] (state, {data, label}) {
       let newMap = new Map()
       let labelSet = new Set()
       data.forEach(function(d, i) {
         let identifier = label ? label : d.state
-        labelSet.add(d.date);
-        let color = label ? "#dddddd" : getColor(i);
+        labelSet.add(d.date)
+        let color = label ? "#dddddd" : getColor(i)
         if (!newMap.has(identifier)) {
           newMap.set(identifier, {
             label: identifier,
@@ -138,30 +150,42 @@ export default new Vuex.Store({
           positive: d.positive,
           death: d.death,
           lastModified: d.dateChecked,
-        });
-      });
+        })
+      })
 
       if (label === "USA") {
         state.dataset.us = newMap.get("USA")
       } else {
         state.dataset.states = newMap
       }
-      state.dates = Array.from(labelSet);
-      state.dates.sort();
+      state.dates = Array.from(labelSet)
+      state.dates.sort()
+      state.ready = true
     },
     [SET_CHART_DATA] (state, chartConfig) {
-      state.chartConfig.movingAvgDays = chartConfig.movingAvgDays ?? state.chartConfig.movingAvgDays;
-      state.chartConfig.lookbackDays = chartConfig.lookbackDays ?? state.chartConfig.lookbackDays;
+      state.chartConfig.movingAvgDays = chartConfig.movingAvgDays ?? state.chartConfig.movingAvgDays
+      state.chartConfig.lookbackDays = chartConfig.lookbackDays ?? state.chartConfig.lookbackDays
 
-      let datasets = Array.from(state.dataset.states.values()).filter((item) => state.selectedStates.includes(item.label) );
+      let datasets = Array.from(state.dataset.states.values())
+                          .filter((item) => state.selectedStates.includes(item.label) )
+
+      let chart = "positiveIncrease"
+      switch (state.chartType) {
+        case "tests":
+          chart = "totalTestResultsIncrease"
+          break
+        case "deaths":
+          chart = "deathIncrease"
+          break
+      }
 
       let prefillData = (dataset) => {
         dataset.data = []
         state.dates.forEach(function(dateLabel) {
           if (dataset.metadata.has(dateLabel)) {
-            dataset.data.push(dataset.metadata.get(dateLabel)[state.chartType]);
+            dataset.data.push(dataset.metadata.get(dateLabel)[chart])
           } else {
-            dataset.data.push(0);
+            dataset.data.push(0)
           }
         })
         return dataset
@@ -185,46 +209,65 @@ export default new Vuex.Store({
       }
 
       datasets.forEach(function(dataset) {
-        let originals = [0];
-        let growthFactors = [1];
-        let avgGrowthFactors = [];
+        let originals = [0]
+        let growthFactors = [1]
+        let avgGrowthFactors = []
 
-        let prev = dataset.data[0];
+        let prev = dataset.data[0]
         for (let i = 1; i < dataset.data.length; i++) {
-          originals.push(dataset.data[i]);
+          originals.push(dataset.data[i])
 
           // For data that doesn't make sense, keep the growth factor flat
-          let transformed = prev < 0.001 ? 1 : dataset.data[i] * 1.0 / prev;
-          prev = dataset.data[i];
-          growthFactors.push(transformed);
+          let transformed = prev < 0.001 ? 1 : dataset.data[i] * 1.0 / prev
+          prev = dataset.data[i]
+          growthFactors.push(transformed)
         }
-        let n = state.chartConfig.movingAvgDays;
+        let n = state.chartConfig.movingAvgDays
         for (let i = 0; i < n; i++) {
-          avgGrowthFactors.push(1.0);
+          avgGrowthFactors.push(1.0)
         }
         for (let i = n; i < growthFactors.length; i++) {
           let sumOriginal = originals.slice(i-n, i)
-                                     .reduce((a, b) => a+b, 0) / n;
+                                     .reduce((a, b) => a+b, 0) / n
           let sumOriginalNow = originals.slice(i-n+1, i+1)
-                                        .reduce((a, b) => a+b, 0) / n;
-          let val = sumOriginalNow < 0.1 || sumOriginal < 0.1 ? 1 : sumOriginalNow / sumOriginal;
-          avgGrowthFactors.push(val);
+                                        .reduce((a, b) => a+b, 0) / n
+          let val = sumOriginalNow < 0.1 || sumOriginal < 0.1 ? 1 : sumOriginalNow / sumOriginal
+          avgGrowthFactors.push(val)
         }
         dataset.data = avgGrowthFactors.slice(
           avgGrowthFactors.length - state.chartConfig.lookbackDays,
-          avgGrowthFactors.length);
-      });
+          avgGrowthFactors.length)
+      })
+
+      // Add horizontal line at y=1.0
+      datasets.push({
+        label: "",
+        data: new Array(state.dates.length).fill(1.0),
+        borderColor: "rgba(255, 0, 0, 0.5)",
+        backgroundColor: "rgba(255, 0, 0, 0.5)",
+        hidden: false,
+        fill: false,
+        borderWidth: 1,
+        radius: 0,
+        order: 99,
+      })
 
       state.chartData = {
         labels: state.dates.slice(state.dates.length - state.chartConfig.lookbackDays, state.dates.length),
         datasets: datasets,
-      };
+      }
+      state.chartReady = true;
     },
     [TOGGLE_STATE_HIDDEN] (state, { label, isHidden }) {
-      if (!state.dataset.states.has(label)) {
+      if (label === "") {
         return
       }
-      state.dataset.states.get(label).hidden = isHidden;
+
+      let prop = state.dataset.states.get(label)
+      if (prop) {
+        prop.hidden = isHidden
+      }
+
       const i = state.selectedStates.indexOf(label)
       if (isHidden && i > -1) {
         state.selectedStates.splice(i, 1)
@@ -300,55 +343,34 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    retrieveUSData (context) {
-      const api = "https://covidtracking.com/api/v1/us/daily.json";
-      fetch(api)
-        .then((response) => {
-          return response.json();
-        })
-        .then((data) => {
-          context.commit(SET_STATES_DATA, {data: data, label: "USA"});
-          context.commit(SET_CHART_DATA, {});
-          context.commit(SET_SNAPSHOT_DATE)
-        });
-    },
-    retrieveStatesData (context) {
-      const api = "https://covidtracking.com/api/v1/states/daily.json";
-      fetch(api)
-        .then((response) => {
-          return response.json();
-        })
-        .then((data) => {
-          context.commit(SET_STATES_DATA, {data: data});
-          context.commit(SET_CHART_DATA, {});
-        });
+    async retrieveAPIData (context) {
+      const usAPI = "https://covidtracking.com/api/v1/us/daily.json"
+      const statesAPI = "https://covidtracking.com/api/v1/states/daily.json"
+      const usData = await (await fetch(usAPI)).json()
+      context.commit(SET_STATES_DATA, {data: usData, label: "USA"})
+      context.commit(SET_SNAPSHOT_DATE)
+
+      const statesData = await (await fetch(statesAPI)).json()
+      context.commit(SET_STATES_DATA, {data: statesData})
+      context.commit(SET_CHART_DATA, {})
     },
     updateChart (context, {lookbackDays, movingAvgDays}) {
       context.commit(SET_CHART_DATA, {
         lookbackDays: lookbackDays,
         movingAvgDays: movingAvgDays,
-      });
+      })
     },
     toggleStateHidden (context, { label, isHidden, refresh }) {
-      context.commit(TOGGLE_STATE_HIDDEN, { label: label, isHidden: isHidden })
+      context.commit(TOGGLE_STATE_HIDDEN, { label, isHidden })
       if (refresh) {
-        context.commit(SET_CHART_DATA, {});
+        context.commit(SET_CHART_DATA, {})
       }
     },
     setSnapshotForLabel (context, { date }) {
       context.commit(SET_SNAPSHOT_DATE, date)
     },
     setChartType (context, chartType) {
-      let chart = "positiveIncrease";
-      switch (chartType) {
-        case "tests":
-          chart = "totalTestResultsIncrease";
-          break;
-        case "deaths":
-          chart = "deathIncrease"
-          break;
-      }
-      context.commit(SET_CHART_TYPE, chart)
+      context.commit(SET_CHART_TYPE, chartType)
       context.commit(SET_CHART_DATA, {})
     },
     toggleUSSelect (context, value) {
@@ -361,6 +383,16 @@ export default new Vuex.Store({
     },
     setDisplayMode (context, displayMode) {
       context.commit(SET_DISPLAY_MODE, displayMode)
+      context.commit(SET_CHART_DATA, {})
+    },
+    renderChart (context, {states, chartType, isUSSelected}) {
+      states = states.filter((label) => label !== "")
+      context.commit(SET_SELECTED_STATES, states)
+      states.forEach((state) => {
+        context.commit(TOGGLE_STATE_HIDDEN, { label: state, isHidden: false })
+      })
+      context.commit(SET_CHART_TYPE, chartType)
+      context.commit(TOGGLE_US_SELECT, isUSSelected)
       context.commit(SET_CHART_DATA, {})
     }
   },

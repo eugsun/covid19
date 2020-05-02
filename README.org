@@ -1,3 +1,0 @@
-#+TITLE: COVID-19 Trend in the US
-
-It's getting difficult to gain an intuition on when and whether the pandemic may be ending. Here's a scratchpad for me to try to develop that intuition.

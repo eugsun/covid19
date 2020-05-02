@@ -37,6 +37,7 @@
 </template>
 
 <script>
+ import USStates from "@/utils/USStates"
  export default {
      name: 'Dashboard',
      computed: {
@@ -61,8 +62,19 @@
          },
          snapshotStatesStr: function() {
              let states = Array.from(this.$store.state.selectedStates)
-             const statesStr = "In " + states.join(", ")
-             return states.length > 0 ? statesStr : "USA"
+             if (states.length <= 0) {
+                 return "USA"
+             }
+             const statesStr = Array.from(this.$store.state.selectedStates)
+                                    .map((abbrev) => USStates[abbrev])
+                                    .reduce((str, state, index, arr) => {
+                                        if (index != arr.length - 1) {
+                                            return `${str}, ${state}`
+                                        } else {
+                                            return`${str}, and ${state}`
+                                        }
+                                    })
+             return statesStr
          }
      }
  }

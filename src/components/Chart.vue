@@ -1,5 +1,5 @@
 <template>
-    <section id="chart">
+    <section id="chart" v-if="ready">
         <div class="container">
             <div class="columns">
                 <div class="column is-9">
@@ -12,36 +12,36 @@
                         <div id="chart-control">
                             <div class="columns is-vcentered is-centered">
                                 <div class="column">
-                                        <label class="radio" for="compareMode">
-                                            <input type="radio" id="compareMode" value="compare" v-model="displayMode">
-                                            Compare Mode
-                                        </label>
-                                        <br>
-                                        <label class="radio" for="combineMode">
-                                            <input type="radio" id="combineMode" value="combine" v-model="displayMode">
-                                            Combine Mode
-                                        </label>
+                                    <label class="radio" for="compareMode">
+                                        <input type="radio" id="compareMode" value="compare" v-model="displayMode">
+                                        Compare Mode
+                                    </label>
+                                    <br>
+                                    <label class="radio" for="combineMode">
+                                        <input type="radio" id="combineMode" value="combine" v-model="displayMode">
+                                        Combine Mode
+                                    </label>
                                 </div>
                                 <div class="column has-text-centered">
                                     <p>Lookback Days: {{ lookbackDays }}</p>
-                                    <p><input class="slider is-fullwidth is-info is-circle" v-model="lookbackDays" type="range" min="7" max="60"></p>
+                                    <p><input class="slider is-fullwidth is-info is-circle" type="range" min="7" max="60"
+                                              v-model="lookbackDays"></p>
                                 </div>
                                 <div class="column has-text-centered">
                                     <p>Trailing Average Days: {{ movingAvgDays }}</p>
-                                    <p><input class="slider is-fullwidth is-info is-circle" v-model="movingAvgDays" type="range" min="1" max="14"></p>
+                                    <p><input class="slider is-fullwidth is-info is-circle" type="range" min="1" max="14"
+                                              v-model="movingAvgDays"></p>
                                 </div>
                                 <div class="column has-text-right">
                                     <button class="button is-primary" v-on:click="render">Update</button>
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <LineChart
-                                :chart-data="chartData"
-                                :options="options"
-                                :height="500"
-                            />
-                        </div>
+                        <LineChart
+                            :key="selectedStates.length"
+                            :chart-data="chartData"
+                            :options="options"
+                            :height="500"/>
                     </div>
                 </div>
                 <div class="column is-3">
@@ -50,7 +50,7 @@
                             <label class="checkbox">
                                 <input type="checkbox" v-model="isUSSelected"/>
                             </label>
-                            Show US Aggregate
+                            Show US Reference Line
                         </div>
                         <div class="panel-block">
                             <span>
@@ -58,8 +58,8 @@
                                        class="input" type="number" min="1" max="20"/>
                             </span>
                             <span class="select">
-                                <select v-model="regions">
-                                    <option value="">Regions</option>
+                                <select v-model="region">
+                                    <option value="">States with =></option>
                                     <option value="high-test">Highest Test Coverage</option>
                                     <option value="low-test">Lowest Test Coverage</option>
                                     <option value="high-positive">Highest % Positive</option>
@@ -70,14 +70,18 @@
                             </span>
                         </div>
                         <div class="panel-block">
-                            <input class="input is-primary" type="text" placeholder="Search State" v-model="autocompleteState" />
+                            <input class="input is-primary" type="text"
+                                   placeholder="Search by State/Territory Name"
+                                   v-model="autocompleteState"/>
                         </div>
                         <div id="state-selection">
                             <a class="panel-block columns" v-on:click="toggleHidden(index)"
                                v-for="(state, index) in availableStates" :key="index">
-                                <span class="column is-two-thirds">{{ getStateName(state.label) }} ({{ state.label }})</span>
+                                <span class="column is-two-thirds">
+                                    {{ getStateName(state.label) }} ({{ state.label }})
+                                </span>
                                 <span class="column is-one-third has-text-right">
-                                    <div v-if="!state.hidden">
+                                    <div v-if="selectedStates.includes(state.label)">
                                         <i class="fas fa-check-circle"></i>
                                     </div>
                                 </span>
@@ -99,8 +103,14 @@
      name: 'Chart',
      props: ["chartType", "activeStates"],
      computed: {
+         ready: function () {
+             return this.$store.state.chartReady
+         },
+         selectedStates: function () {
+             return this.$store.state.selectedStates
+         },
          chartData: function () {
-             return this.$store.state.chartData;
+             return this.$store.state.chartData
          },
          availableStates: function () {
              let l = Array.from(this.$store.state.dataset.states.values())
@@ -110,21 +120,10 @@
                                   || this.getStateName(state.label).toLowerCase().includes(phrase)
                           })
              l.sort((a, b) => a.label > b.label)
-             l.sort((a, b) => a.hidden > b.hidden)
              return l
          },
          selectedChart: function () {
-             const chartType = this.$store.state.chartType
-             switch (chartType) {
-                 case "totalTestResultsIncrease":
-                     return "tests"
-                 case "positveIncrease":
-                     return "cases"
-                 case "deathIncrease":
-                     return "deaths"
-                 default:
-                     return "cases"
-             }
+             return this.$store.state.chartType
          },
          isUSSelected: {
              get () {
@@ -148,13 +147,15 @@
              },
              set (value) {
                  const region = this.$store.state.region
-                 this.$store.dispatch("setRegion", {region, numRegionStates: value}).then(() => {
-                     this.$router.push({ query: { chartType: this.chartType,
-                                                  activeStates: this.$store.state.selectedStates.join(",")} })
-                 })
+                 if (region.length > 0) {
+                     this.$store.dispatch("setRegion", {region, numRegionStates: value}).then(() => {
+                         this.$router.push({ query: { chartType: this.chartType,
+                                                      activeStates: this.$store.state.selectedStates.join(",")} })
+                     })
+                 }
              }
          },
-         regions: {
+         region: {
              get () {
                  return this.$store.state.region
              },
@@ -168,11 +169,10 @@
          },
      },
      data: function () {
-         let app = this;
+         let app = this
          return {
              autocompleteState: "",
              filterStateMap: new Map(),
-             loaded: false,
              lookbackDays: 30,
              movingAvgDays: 7,
              options: {
@@ -184,19 +184,19 @@
                      display: false,
                  },
                  tooltips: {
-                     mode: 'index',
+                     mode: "index",
                      intersect: false,
                      callbacks: {
                          label: function(tooltipItem, data) {
-                             var label = data.datasets[tooltipItem.datasetIndex].label || '';
-                             if (label) {
-                                 label += ': ';
+                             var label = data.datasets[tooltipItem.datasetIndex].label || ""
+                             if (label === "") {
+                                 return ""
                              }
-                             label += Math.round(tooltipItem.yLabel * 100) / 100;
+                             label += ": " + (Math.round(tooltipItem.yLabel * 100) / 100).toString()
                              app.$store.dispatch("setSnapshotForLabel",
                                                  {date: tooltipItem.xLabel,
                                                   label: data.datasets[tooltipItem.datasetIndex].label})
-                             return label;
+                             return label
                          }
                      }
                  },
@@ -205,20 +205,17 @@
                          display: true,
                          scaleLabel: {
                              display: true,
-                             labelString: 'Date',
+                             labelString: "Date",
                          }
                      }],
                      yAxes: [{
                          display: true,
                          scaleLabel: {
                              display: true,
-                             labelString: 'Growth Factor',
+                             labelString: "Growth Factor",
                          },
-                         gridLines: {
-                         },
+                         gridLines: {},
                          ticks: {
-                             // min: -1,
-                             // max: 2,
                              stepSize: 0.1,
                          }
                      }],
@@ -231,7 +228,7 @@
      },
      methods: {
          render: function () {
-             let app = this;
+             let app = this
              this.$store.dispatch("updateChart", {
                  lookbackDays: app.lookbackDays,
                  movingAvgDays: app.movingAvgDays
@@ -239,10 +236,14 @@
          },
          toggleHidden: function (index) {
              let label = this.availableStates[index].label
+             const isHiddenNow = !this.selectedStates.includes(label)
 
-             // URL edit
-             let activeStates = this.activeStates;
-             if (this.availableStates[index].hidden === true) {
+             this.$store.dispatch("toggleStateHidden", {
+                 label: label, isHidden: !isHiddenNow, refresh: true
+             })
+
+             let activeStates = this.activeStates
+             if (isHiddenNow) {
                  // Show
                  if (!activeStates.includes(label)) {
                      activeStates += activeStates.length > 0 ? `,${label}` : label
@@ -253,21 +254,17 @@
              }
              this.$router.push({ query: { chartType: this.chartType, activeStates: activeStates} })
 
-             // State edit
-             this.$store.dispatch("toggleStateHidden", {
-                 label: label, isHidden: !this.availableStates[index].hidden, refresh: true
-             });
-             this.autocompleteState = "";
+             this.autocompleteState = ""
          },
          filterStates: function (autocompleteState) {
              this.availableStates.forEach((state) => {
                  if (state.label.includes(autocompleteState)) {
-                     this.filterStateMap.set(state.label, true);
+                     this.filterStateMap.set(state.label, true)
                  }
-             });
+             })
          },
          getStateName: function (abbrev) {
-             return USStates[abbrev];
+             return USStates[abbrev]
          },
          setChart: function (chartType) {
              this.$store.dispatch("setChartType", chartType)
@@ -278,16 +275,12 @@
          }
      },
      mounted () {
-         console.log("Mounting Chart")
-         if (this.activeStates) {
-             this.activeStates.split(",").forEach((state) => {
-                 this.$store.dispatch("toggleStateHidden", {
-                     label: state, isHidden: false, refresh: false
-                 });
-             })
-         }
-         this.$store.dispatch("setChartType", this.chartType)
-         this.$store.dispatch("toggleUSSelect", this.isUSSelected);
+         const activeStatesArray = this.activeStates.split(",")
+         this.$store.dispatch("renderChart", {
+             states: activeStatesArray,
+             chartType: this.chartType,
+             isUSSelected: this.isUSSelected
+         })
      }
  }
 </script>
@@ -297,7 +290,7 @@
      margin-bottom: 2rem;
  }
  .select {
-     max-width: 65%;
+     max-width: 70%;
  }
  #num-region-states {
      min-width: 4rem;

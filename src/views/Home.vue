@@ -6,7 +6,7 @@
             <div class="container">
                 <p>By <a href="https://twitter.com/eugsun">@eugsun</a></p>
                 <p>Data provided by <a href="https://covidtracking.com">The COVID Tracking Project</a></p>
-                <p><a href="https://github.com/eugsun/covid19">Source</a></p>
+                <p>Source code on <a href="https://github.com/eugsun/covid19">GitHub</a></p>
             </div>
         </footer>
     </div>
@@ -19,10 +19,10 @@
  export default {
      name: 'App',
      props: ["chartType", "activeStates"],
-     data: () => ({
-         ready: false
-     }),
      computed: {
+         ready: function () {
+             return this.$store.state.ready
+         },
          dashKey: function () {
              let usLoaded = this.$store.state.dataset.us ? "us-loaded" : "us-not-loaded"
              let numStatesLoaded = this.$store.state.dataset.states.length
@@ -40,12 +40,7 @@
          Dashboard, Chart
      },
      mounted () {
-         console.log("Mounting HOME")
-         this.$store.dispatch("retrieveUSData").then(() => {
-             this.$store.dispatch("retrieveStatesData");
-         }).then(() => {
-             this.ready = true;
-         });
+         this.$store.dispatch("retrieveAPIData")
      }
  }
 </script>
