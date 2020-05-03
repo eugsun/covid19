@@ -59,9 +59,9 @@
                             </span>
                             <span class="select">
                                 <select v-model="region">
-                                    <option value="">States with =></option>
-                                    <option value="high-test">Highest Test Coverage</option>
-                                    <option value="low-test">Lowest Test Coverage</option>
+                                    <option value="">States with</option>
+                                    <option value="high-test">Highest Tests per Capita</option>
+                                    <option value="low-test">Lowest Tests per Capita</option>
                                     <option value="high-positive">Highest % Positive</option>
                                     <option value="low-positive">Lowest % Positive</option>
                                     <option value="high-death">Highest Death Rate</option>

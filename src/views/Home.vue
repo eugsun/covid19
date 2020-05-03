@@ -1,7 +1,7 @@
 <template>
     <div id="home" v-if="ready">
         <Dashboard :key="dashKey" />
-        <Chart v-bind:chart-type="chartType" v-bind:active-states="activeStates" :key="chartKey" />
+        <Chart :chart-type="chartType" :active-states="activeStates" :key="chartKey" />
         <footer class="footer">
             <div class="container">
                 <p>By <a href="https://twitter.com/eugsun">@eugsun</a></p>

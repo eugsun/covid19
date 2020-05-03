@@ -12,7 +12,13 @@
                 <div>
                     <p class="heading">Cumulative Tests</p>
                     <p class="title">{{ totalTests }}</p>
-                    <p>{{ percentTested }} of population</p>
+                    <p class="tooltip">
+                        {{ percentTested }} of population*
+                        <span class="tooltiptext">
+                            This is an estimation of the test coverage upper-bound,
+                            since tests can be done multiple times for a single person.
+                        </span>
+                    </p>
                     <p>+{{ testIncrease }} from previous day</p>
                 </div>
             </div>
@@ -86,5 +92,38 @@
  }
  #state-list {
      max-width: 30rem;
+ }
+
+ .tooltip {
+     position: relative;
+     display: inline-block;
+ }
+
+ /* Tooltip text */
+ .tooltip .tooltiptext {
+     visibility: hidden;
+     width: 20rem;
+     background-color: #555;
+     color: #fff;
+     text-align: center;
+     padding: 0.5rem;
+     border-radius: 6px;
+
+     /* Position the tooltip text */
+     position: absolute;
+     z-index: 1;
+     top: 100%;
+     left: 50%;
+     margin-left: -10rem;
+
+     /* Fade in tooltip */
+     opacity: 0;
+     transition: opacity 0.3s;
+ }
+
+ /* Show the tooltip text when you mouse over the tooltip container */
+ .tooltip:hover .tooltiptext {
+     visibility: visible;
+     opacity: 1;
  }
 </style>
