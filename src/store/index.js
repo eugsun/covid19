@@ -181,6 +181,7 @@ export default new Vuex.Store({
 
       let prefillData = (dataset) => {
         dataset.data = []
+        dataset.hidden = false
         state.dates.forEach(function(dateLabel) {
           if (dataset.metadata.has(dateLabel)) {
             dataset.data.push(dataset.metadata.get(dateLabel)[chart])

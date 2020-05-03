@@ -1,6 +1,6 @@
 <template>
-    <section id="dashboard" class="section">
-        <div class="level">
+    <section class="section">
+        <div id="dash-level" class="level">
             <div class="level-item has-text-centered">
                 <div>
                     <p class="heading">Date</p>
@@ -81,6 +81,9 @@
 </script>
 
 <style scope>
+ #dash-level {
+     min-height: 10rem;
+ }
  #state-list {
      max-width: 30rem;
  }
