@@ -5,6 +5,7 @@
                 <div>
                     <p class="heading">Date</p>
                     <p class="title">{{ date }}</p>
+                    <p>Population: {{ population }} K</p>
                     <p id="state-list">{{ snapshotStatesStr }}</p>
                 </div>
             </div>
@@ -51,6 +52,9 @@
              const dateStr = this.$store.state.snapshotDate.toString()
              return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6)}`
          },
+         population: function () {
+             return new Intl.NumberFormat()
+                            .format(Math.floor(this.$store.getters.snapshot.population / 1000)) },
          totalTests: function () { return this.$store.getters.snapshot.totalTestResults.toLocaleString() },
          totalPositives: function () { return this.$store.getters.snapshot.positive.toLocaleString() },
          totalDeaths: function () { return this.$store.getters.snapshot.death.toLocaleString() },

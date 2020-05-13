@@ -60,12 +60,16 @@
                             <span class="select">
                                 <select v-model="region">
                                     <option value="">States with</option>
-                                    <option value="high-test">Highest Tests per Capita</option>
-                                    <option value="low-test">Lowest Tests per Capita</option>
+                                    <option value="high-population">Most People</option>
+                                    <option value="low-population">Least People</option>
+                                    <option value="high-test">Most Tests per Capita</option>
+                                    <option value="low-test">Fewest Tests per Capita</option>
                                     <option value="high-positive">Highest % Positive</option>
                                     <option value="low-positive">Lowest % Positive</option>
                                     <option value="high-death">Highest Death Rate</option>
                                     <option value="low-death">Lowest Death Rate</option>
+                                    <option value="high-growth">Highest Growth Rate</option>
+                                    <option value="low-growth">Lowest Growth Rate</option>
                                 </select>
                             </span>
                         </div>

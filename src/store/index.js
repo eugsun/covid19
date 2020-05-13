@@ -286,6 +286,9 @@ export default new Vuex.Store({
       }
     },
     [SET_REGION] (state, {region, numRegionStates}) {
+      state.region = region ?? state.region
+      state.numRegionStates = numRegionStates ?? state.numRegionStates
+
       let states = Array.from(state.dataset.states.keys())
       const date = state.snapshotDate
       let populations =
@@ -295,6 +298,8 @@ export default new Vuex.Store({
                   USPopulations.data.find((item) => item["State"].toLowerCase() === name)
                   return popItem ? popItem["Population"] : 0
                 })
+
+      let n = parseInt(state.chartConfig.movingAvgDays)
       let transformed = states.map((label, index) => {
         let result = { label: label, population: populations[index] }
         let dataSource = state.dataset.states.get(label)
@@ -305,11 +310,23 @@ export default new Vuex.Store({
         result.percentTested  = result.totalTestResults / result.population
         result.percentPositive = result.positive / result.totalTestResults
         result.percentDead = result.death / result.positive
+
+        let dates = state.dates.slice(state.dates.length - n - 1, state.dates.length + 1)
+        let increases = dates.map(d => (dataSource.metadata.get(d) || {})
+                                  .positiveIncrease || 0);
+        result.growthFactor = increases.slice(1, increases.length+1).reduce((a, b) => a+b, 0)
+          / increases.slice(0, increases.length).reduce((a, b) => a+b, 0)
         return result
       })
       transformed = transformed.filter(result => result.population > 100 && result.positive > 100)
 
-      switch (region) {
+      switch (state.region) {
+        case "high-population":
+          transformed.sort((a, b) => a.population < b.population)
+          break
+        case "low-population":
+          transformed.sort((a, b) => a.population > b.population)
+          break
         case "high-test":
           transformed.sort((a, b) => a.percentTested < b.percentTested)
           break
@@ -328,16 +345,20 @@ export default new Vuex.Store({
         case "low-death":
           transformed.sort((a, b) => a.percentDead > b.percentDead)
           break
+        case "high-growth":
+          transformed.sort((a, b) => a.growthFactor < b.growthFactor)
+          break
+        case "low-growth":
+          transformed.sort((a, b) => a.growthFactor > b.growthFactor)
+          break
         default:
           transformed = []
       }
 
-      state.selectedStates = transformed.slice(0, numRegionStates).map((state) => state.label)
+      state.selectedStates = transformed.slice(0, state.numRegionStates).map((state) => state.label)
       state.dataset.states.forEach((val, key) => {
         val.hidden = state.selectedStates.includes(key) ? false : true
       })
-      state.numRegionStates = numRegionStates
-      state.region = region
     },
     [SET_DISPLAY_MODE] (state, displayMode) {
       state.displayMode = displayMode
