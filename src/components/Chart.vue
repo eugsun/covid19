@@ -24,7 +24,7 @@
                                 </div>
                                 <div class="column has-text-centered">
                                     <p>Lookback Days: {{ lookbackDays }}</p>
-                                    <p><input class="slider is-fullwidth is-info is-circle" type="range" min="7" max="60"
+                                    <p><input class="slider is-fullwidth is-info is-circle" type="range" min="7" :max="maxNumOfDays()"
                                               v-model="lookbackDays"></p>
                                 </div>
                                 <div class="column has-text-centered">
@@ -175,6 +175,7 @@
      data: function () {
          let app = this
          return {
+             now: Date.now(),
              autocompleteState: "",
              filterStateMap: new Map(),
              lookbackDays: 30,
@@ -276,6 +277,9 @@
          },
          isChart: function (chartType) {
              return this.selectedChart === chartType
+         },
+         maxNumOfDays: function () {
+             return (this.now - new Date(2020, 1, 20).getTime()) / 1000 / 60 / 60 / 24
          }
      },
      mounted () {
