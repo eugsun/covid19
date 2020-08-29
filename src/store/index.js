@@ -366,8 +366,8 @@ export default new Vuex.Store({
   },
   actions: {
     async retrieveAPIData (context) {
-      const usAPI = "https://covidtracking.com/api/v1/us/daily.json"
-      const statesAPI = "https://covidtracking.com/api/v1/states/daily.json"
+      const usAPI = "https://api.covidtracking.com/v1/us/daily.json"
+      const statesAPI = "https://api.covidtracking.com/v1/states/daily.json"
       const usData = await (await fetch(usAPI)).json()
       context.commit(SET_STATES_DATA, {data: usData, label: "USA"})
       context.commit(SET_SNAPSHOT_DATE)
