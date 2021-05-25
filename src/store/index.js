@@ -322,34 +322,34 @@ export default new Vuex.Store({
 
       switch (state.region) {
         case "high-population":
-          transformed.sort((a, b) => a.population < b.population)
+          transformed.sort((a, b) => -a.population + b.population)
           break
         case "low-population":
-          transformed.sort((a, b) => a.population > b.population)
+          transformed.sort((a, b) => a.population - b.population)
           break
         case "high-test":
-          transformed.sort((a, b) => a.percentTested < b.percentTested)
+          transformed.sort((a, b) => -a.percentTested + b.percentTested)
           break
         case "low-test":
-          transformed.sort((a, b) => a.percentTested > b.percentTested)
+          transformed.sort((a, b) => a.percentTested - b.percentTested)
           break
         case "high-positive":
-          transformed.sort((a, b) => a.percentPositive < b.percentPositive)
+          transformed.sort((a, b) => -a.percentPositive + b.percentPositive)
           break
         case "low-positive":
-          transformed.sort((a, b) => a.percentPositive > b.percentPositive)
+          transformed.sort((a, b) => a.percentPositive - b.percentPositive)
           break
         case "high-death":
-          transformed.sort((a, b) => a.percentDead < b.percentDead)
+          transformed.sort((a, b) => -a.percentDead + b.percentDead)
           break
         case "low-death":
-          transformed.sort((a, b) => a.percentDead > b.percentDead)
+          transformed.sort((a, b) => a.percentDead - b.percentDead)
           break
         case "high-growth":
-          transformed.sort((a, b) => a.growthFactor < b.growthFactor)
+          transformed.sort((a, b) => -a.growthFactor + b.growthFactor)
           break
         case "low-growth":
-          transformed.sort((a, b) => a.growthFactor > b.growthFactor)
+          transformed.sort((a, b) => a.growthFactor - b.growthFactor)
           break
         default:
           transformed = []
@@ -366,8 +366,8 @@ export default new Vuex.Store({
   },
   actions: {
     async retrieveAPIData (context) {
-      const usAPI = "https://api.covidtracking.com/v1/us/daily.json"
-      const statesAPI = "https://api.covidtracking.com/v1/states/daily.json"
+      const usAPI = "/data/us.json"
+      const statesAPI = "/data/states.json"
       const usData = await (await fetch(usAPI)).json()
       context.commit(SET_STATES_DATA, {data: usData, label: "USA"})
       context.commit(SET_SNAPSHOT_DATE)

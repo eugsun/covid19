@@ -5,7 +5,7 @@
         <footer class="footer">
             <div class="container">
                 <p>By <a href="https://twitter.com/eugsun">@eugsun</a></p>
-                <p>Data provided by <a href="https://covidtracking.com">The COVID Tracking Project</a></p>
+                <p>Data provided by <a href="https://covidtracking.com">The COVID Tracking Project</a>, which stopped data collection on March 7, 2021.</p>
                 <p>Source code on <a href="https://github.com/eugsun/covid19">GitHub</a></p>
                 <p>For a short background write-up see <a href="https://eugsun.com/tinkers/2020/covid19-dashboard/">here</a></p>
             </div>
